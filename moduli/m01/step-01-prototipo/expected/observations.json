@@ -1,0 +1,19 @@
+{
+  "success": {
+    "status": "PAID",
+    "orders": 1,
+    "amount_eur": 20
+  },
+  "transient": {
+    "status": "FAILED",
+    "gateway_attempts": 1
+  },
+  "repeated": {
+    "order_ids": ["ord-1", "ord-2"],
+    "orders": 2
+  },
+  "altered_price": {
+    "status": "PAID",
+    "gateway_amount_eur": 1
+  }
+}
