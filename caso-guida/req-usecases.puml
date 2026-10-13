@@ -1,0 +1,31 @@
+@startuml
+left to right direction
+skinparam actorStyle awesome
+
+actor "Customer" as Customer
+actor "Payment Gateway" as Gateway
+actor "Carrier Service" as Carrier
+
+rectangle "E-Commerce Platform" as Platform {
+  usecase "Authenticate Account" as UC_Auth
+  usecase "Browse Product Catalog" as UC_Browse
+  usecase "Manage Shopping Cart" as UC_Cart
+  usecase "Complete Checkout" as UC_Checkout
+  usecase "Submit Order Payment" as UC_Payment
+  usecase "Track Fulfillment" as UC_Tracking
+}
+
+Customer --> UC_Auth
+Customer --> UC_Browse
+Customer --> UC_Cart
+Customer --> UC_Checkout
+Customer --> UC_Payment
+Customer --> UC_Tracking
+
+UC_Payment --> Gateway : authorize / capture
+UC_Tracking --> Carrier : shipment updates
+
+UC_Checkout .> UC_Cart : <<include>>
+UC_Payment .> UC_Checkout : <<extend>>
+
+@enduml

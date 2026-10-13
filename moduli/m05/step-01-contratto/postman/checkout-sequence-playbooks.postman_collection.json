@@ -1,0 +1,738 @@
+{
+  "info": {
+    "name": "M05 - Playbook Postman per le sequenze checkout",
+    "description": "Generata da openapi/checkout-api.yaml e scenarios/postman-playbooks.yaml con scripts/generate_postman.py. Scenario simulati: Prism sceglie gli esempi OAS tramite Prefer; non sono test di un backend stateful.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "m05-demo-token",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:4010",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Checkout autorizzato",
+      "description": "Sequenza checkout: autorizzazione pagamento e creazione ordine pagato. Il sequence diagram richiede anche la creazione della spedizione, ma nell'OAS è disponibile solo la lettura; quel passaggio è dichiarato come gap.",
+      "item": [
+        {
+          "name": "01 - POST /payments [201 authorized]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=201, example=authorized, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-checkout-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"status matches the scenario\", function () {",
+                  "  pm.expect(body[\"status\"]).to.eql(\"AUTHORIZED\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-checkout-demo\");",
+                  "});",
+                  "pm.collectionVariables.set(\"paymentId\", body[\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - POST /orders [201 checkoutPlaced]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=201, example=checkoutPlaced, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"paymentId\": \"{{paymentId}}\",\n  \"shippingAddressId\": \"22222222-2222-4222-8222-222222222222\",\n  \"items\": [\n    {\n      \"productId\": \"33333333-3333-4333-8333-333333333333\",\n      \"name\": \"Demo product\",\n      \"unitPrice\": {\n        \"amount\": 49.9,\n        \"currency\": \"EUR\"\n      },\n      \"quantity\": 1,\n      \"subtotal\": {\n        \"amount\": 49.9,\n        \"currency\": \"EUR\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"status matches the scenario\", function () {",
+                  "  pm.expect(body[\"status\"]).to.eql(\"PAID\");",
+                  "});",
+                  "pm.test(\"paymentId matches the saved collection variable\", function () {",
+                  "  pm.expect(body[\"paymentId\"]).to.eql(pm.collectionVariables.get(\"paymentId\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"orderId\", body[\"id\"]);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Errore transitorio, poi autorizzazione",
+      "description": "Tre richieste sintetiche con la stessa Idempotency-Key; il mock restituisce due errori transitori e poi l'esito finale autorizzato. Verifica la forma delle richieste e degli esempi contrattuali, non il contatore interno del gateway.",
+      "item": [
+        {
+          "name": "01 - POST /payments [402 transientFailure]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=402, example=transientFailure, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-retry-success-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 402\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(402);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"code matches the scenario\", function () {",
+                  "  pm.expect(body[\"code\"]).to.eql(\"TRANSIENT_GATEWAY_FAILURE\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-retry-success-demo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - POST /payments [402 transientFailure]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=402, example=transientFailure, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-retry-success-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 402\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(402);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"code matches the scenario\", function () {",
+                  "  pm.expect(body[\"code\"]).to.eql(\"TRANSIENT_GATEWAY_FAILURE\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-retry-success-demo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - POST /payments [201 authorizedAfterRetry]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=201, example=authorizedAfterRetry, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-retry-success-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"status matches the scenario\", function () {",
+                  "  pm.expect(body[\"status\"]).to.eql(\"AUTHORIZED\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-retry-success-demo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Esaurimento dei tre tentativi",
+      "description": "Due errori transitori seguiti dalla risposta aggregata RETRIES_EXHAUSTED. Nessuna richiesta POST /orders è prevista nel ramo di fallimento.",
+      "item": [
+        {
+          "name": "01 - POST /payments [402 transientFailure]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=402, example=transientFailure, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-retry-exhausted-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 402\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(402);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"code matches the scenario\", function () {",
+                  "  pm.expect(body[\"code\"]).to.eql(\"TRANSIENT_GATEWAY_FAILURE\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-retry-exhausted-demo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - POST /payments [402 transientFailure]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=402, example=transientFailure, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-retry-exhausted-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 402\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(402);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"code matches the scenario\", function () {",
+                  "  pm.expect(body[\"code\"]).to.eql(\"TRANSIENT_GATEWAY_FAILURE\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-retry-exhausted-demo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - POST /payments [402 retriesExhausted]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=402, example=retriesExhausted, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-retry-exhausted-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 402\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(402);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"code matches the scenario\", function () {",
+                  "  pm.expect(body[\"code\"]).to.eql(\"RETRIES_EXHAUSTED\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-retry-exhausted-demo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Rifiuto definitivo senza retry",
+      "description": "Il rifiuto definitivo termina il flusso; non viene invocata POST /orders.",
+      "item": [
+        {
+          "name": "01 - POST /payments [402 declined]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=402, example=declined, dynamic=false"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "m05-payment-declined-demo"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"11111111-1111-4111-8111-111111111111\",\n  \"amount\": {\n    \"amount\": 49.9,\n    \"currency\": \"EUR\"\n  },\n  \"paymentToken\": \"tok_demo_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 402\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(402);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"code matches the scenario\", function () {",
+                  "  pm.expect(body[\"code\"]).to.eql(\"PAYMENT_DECLINED\");",
+                  "});",
+                  "pm.test('Idempotency-Key matches this playbook attempt', function () {",
+                  "  pm.expect(pm.request.headers.get('Idempotency-Key')).to.eql(\"m05-payment-declined-demo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Consultazione tracking ordine",
+      "description": "Sequenza di lettura ordine e shipment. Gli ID sono fixture statiche del mock.",
+      "item": [
+        {
+          "name": "01 - GET /orders/{orderId} [200 orderWithShipment]",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=200, example=orderWithShipment, dynamic=false"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "orders",
+                "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"status matches the scenario\", function () {",
+                  "  pm.expect(body[\"status\"]).to.eql(\"SHIPPED\");",
+                  "});",
+                  "pm.test(\"trackingCode matches the scenario\", function () {",
+                  "  pm.expect(body[\"trackingCode\"]).to.eql(\"DEMO-TRACK-001\");",
+                  "});",
+                  "pm.collectionVariables.set(\"orderId\", body[\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - GET /orders/{orderId}/shipment [200 inTransit]",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "code=200, example=inTransit, dynamic=false"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/shipment",
+              "protocol": "http",
+              "host": [
+                "127.0.0.1"
+              ],
+              "port": "4010",
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "shipment"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"status matches the scenario\", function () {",
+                  "  pm.expect(body[\"status\"]).to.eql(\"IN_TRANSIT\");",
+                  "});",
+                  "pm.test(\"trackingCode matches the scenario\", function () {",
+                  "  pm.expect(body[\"trackingCode\"]).to.eql(\"DEMO-TRACK-001\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

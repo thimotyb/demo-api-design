@@ -1,0 +1,101 @@
+version: 1
+sourceContract: ../openapi/checkout-api.yaml
+scenarios:
+  - name: 01 - Checkout autorizzato
+    description: >-
+      Sequenza checkout: autorizzazione pagamento e creazione ordine pagato.
+      Il sequence diagram richiede anche la creazione della spedizione, ma nell'OAS
+      è disponibile solo la lettura; quel passaggio è dichiarato come gap.
+    sequence: ../../../../caso-guida/req-seq-checkout-success.puml
+    steps:
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-checkout-demo
+        responseCode: 201
+        responseExample: authorized
+        assert: { status: AUTHORIZED }
+        save: { paymentId: id }
+      - operationId: placeOrder
+        requestExample: checkout
+        bodyOverrides: { paymentId: '{{paymentId}}' }
+        responseCode: 201
+        responseExample: checkoutPlaced
+        assert: { status: PAID }
+        assertVariables: { paymentId: paymentId }
+        save: { orderId: id }
+  - name: 02 - Errore transitorio, poi autorizzazione
+    description: >-
+      Tre richieste sintetiche con la stessa Idempotency-Key; il mock restituisce
+      due errori transitori e poi l'esito finale autorizzato. Verifica la forma
+      delle richieste e degli esempi contrattuali, non il contatore interno del gateway.
+    sequence: ../../../../caso-guida/req-seq-payment-retry.puml
+    steps:
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-retry-success-demo
+        responseCode: 402
+        responseExample: transientFailure
+        assert: { code: TRANSIENT_GATEWAY_FAILURE }
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-retry-success-demo
+        responseCode: 402
+        responseExample: transientFailure
+        assert: { code: TRANSIENT_GATEWAY_FAILURE }
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-retry-success-demo
+        responseCode: 201
+        responseExample: authorizedAfterRetry
+        assert: { status: AUTHORIZED }
+  - name: 03 - Esaurimento dei tre tentativi
+    description: >-
+      Due errori transitori seguiti dalla risposta aggregata RETRIES_EXHAUSTED.
+      Nessuna richiesta POST /orders è prevista nel ramo di fallimento.
+    sequence: ../../../../caso-guida/req-seq-payment-retry.puml
+    steps:
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-retry-exhausted-demo
+        responseCode: 402
+        responseExample: transientFailure
+        assert: { code: TRANSIENT_GATEWAY_FAILURE }
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-retry-exhausted-demo
+        responseCode: 402
+        responseExample: transientFailure
+        assert: { code: TRANSIENT_GATEWAY_FAILURE }
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-retry-exhausted-demo
+        responseCode: 402
+        responseExample: retriesExhausted
+        assert: { code: RETRIES_EXHAUSTED }
+  - name: 04 - Rifiuto definitivo senza retry
+    description: >-
+      Il rifiuto definitivo termina il flusso; non viene invocata POST /orders.
+    sequence: ../../../../caso-guida/req-seq-payment-retry.puml
+    steps:
+      - operationId: authorizePayment
+        requestExample: checkout
+        idempotencyKey: m05-payment-declined-demo
+        responseCode: 402
+        responseExample: declined
+        assert: { code: PAYMENT_DECLINED }
+  - name: 05 - Consultazione tracking ordine
+    description: >-
+      Sequenza di lettura ordine e shipment. Gli ID sono fixture statiche del mock.
+    sequence: ../../../../caso-guida/req-seq-order-tracking.puml
+    steps:
+      - operationId: getOrder
+        pathParams: { orderId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb }
+        responseCode: 200
+        responseExample: orderWithShipment
+        assert: { status: SHIPPED, trackingCode: DEMO-TRACK-001 }
+        save: { orderId: id }
+      - operationId: getOrderShipment
+        pathParams: { orderId: '{{orderId}}' }
+        responseCode: 200
+        responseExample: inTransit
+        assert: { status: IN_TRANSIT, trackingCode: DEMO-TRACK-001 }

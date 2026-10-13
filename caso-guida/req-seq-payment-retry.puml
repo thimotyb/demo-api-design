@@ -1,0 +1,20 @@
+@startuml
+actor Customer as Customer
+participant "Web Application" as WebApp
+participant "Payment Gateway" as Gateway
+
+Customer -> WebApp : submit payment(amount, token)
+loop Retry up to 3 attempts
+  WebApp -> Gateway : authorize(amount, token)
+  alt authorization approved
+    Gateway --> WebApp : OK(paymentId)
+    break
+  else transient failure
+    Gateway --> WebApp : FAILED(transient)
+  end
+end
+opt all attempts failed
+  WebApp --> Customer : notify failure, suggest alternative
+end
+
+@enduml

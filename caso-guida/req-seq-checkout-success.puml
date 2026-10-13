@@ -1,0 +1,20 @@
+@startuml
+actor Customer as Customer
+participant "Web Application" as WebApp
+participant "Cart Service" as CartService
+participant "Payment Gateway" as Gateway
+participant "Order Service" as OrderService
+participant "Shipment Service" as ShipmentService
+
+Customer -> WebApp : start checkout
+WebApp -> CartService : total()
+CartService --> WebApp : total
+WebApp -> Gateway : authorize(amount, token)
+Gateway --> WebApp : AuthResult(OK, paymentId)
+WebApp -> OrderService : placeOrder(cartSnapshot, paymentId)
+OrderService --> WebApp : Order{id, status=PAID}
+WebApp -> ShipmentService : createShipment(orderId)
+ShipmentService --> WebApp : Shipment{trackingCode}
+WebApp --> Customer : confirmation + tracking details
+
+@enduml

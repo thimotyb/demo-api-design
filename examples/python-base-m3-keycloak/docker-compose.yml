@@ -1,0 +1,27 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.1
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: xforwarded
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm:/opt/keycloak/data/import:ro
+
+  api:
+    build:
+      context: ./server
+    environment:
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/m3-jwt
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/m3-jwt/protocol/openid-connect/certs
+      KEYCLOAK_EXPECTED_AZP: m3-fastapi-client
+    ports:
+      - "8001:8001"
+    depends_on:
+      - keycloak
+

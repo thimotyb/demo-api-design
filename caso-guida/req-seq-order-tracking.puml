@@ -1,0 +1,17 @@
+@startuml
+actor Customer as Customer
+participant "Web Application" as WebApp
+participant "Order Service" as OrderService
+participant "Shipment Service" as ShipmentService
+participant "Carrier API" as Carrier
+
+Customer -> WebApp : viewOrderStatus(orderId)
+WebApp -> OrderService : getOrder(orderId)
+OrderService --> WebApp : Order{status, trackingCode}
+WebApp -> ShipmentService : getShipment(trackingCode)
+ShipmentService -> Carrier : GET /shipments/{trackingCode}
+Carrier --> ShipmentService : {status, lastUpdate}
+ShipmentService --> WebApp : shipment details
+WebApp --> Customer : show status summary
+
+@enduml

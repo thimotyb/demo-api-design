@@ -1,0 +1,69 @@
+@startuml
+title M04 — Vista ArchiMate: processo, servizi e tecnologia
+left to right direction
+skinparam shadowing false
+skinparam nodesep 28
+skinparam ranksep 35
+!include <archimate/Archimate>
+
+Business_Actor(customer, "Cliente")
+Business_Process(checkout, "BP-01 Checkout, pagamento e avvio spedizione\nAR-01, AR-03, AR-04")
+Business_Process(retry, "BP-02 Gestione retry pagamento\nAR-02")
+Business_Process(tracking, "BP-03 Consultazione tracking\nAR-05")
+
+Application_Component(webapp, "AC-01 Web Application")
+Application_Component(checkoutComp, "AC-02 Checkout Orchestrator")
+Application_Component(cartComp, "AC-03 Cart")
+Application_Component(paymentComp, "AC-04 Payment Service")
+Application_Component(orderComp, "AC-05 Order Service")
+Application_Component(shipmentComp, "AC-06 Shipment Service")
+
+Application_Service(checkoutSvc, "AS-01 Checkout orchestration\nAR-01, AR-03, AR-04")
+Application_Service(cartSvc, "AS-02 Totale carrello\ninterazione interna")
+Application_Service(paymentApi, "AS-03 Payment API\nPOST /payments (AR-02)")
+Application_Service(orderApi, "AS-04 Order API\nPOST /orders; GET /orders/{orderId} (AR-03)")
+Application_Service(shipmentApi, "AS-05 Tracking API\nGET /orders/{orderId}/shipment (AR-05)")
+Application_Service(customerOrdersApi, "AS-06 Customer Orders API\nGET /customers/{customerId}/orders")
+
+Technology_Service(https, "TS-01 Trasporto API\nHTTPS/REST dichiarato nell'OAS")
+Application_Service(paymentProviderApi, "AS-07 Payment Gateway\nservizio esterno, simulato (AR-07)")
+Application_Service(carrierApi, "AS-08 Carrier API\nservizio esterno (AR-05, AR-07)")
+Technology_Service(platformTbd, "TS-02 Runtime, storage e deployment\nscelte TBD (VIN-01)")
+
+Rel_Assignment(customer, checkout, "avvia / consulta")
+Rel_Triggering(checkout, retry, "se errore transitorio")
+Rel_Triggering(checkout, tracking, "dopo ordine")
+
+Rel_Serving(checkoutSvc, checkout, "supporta il checkout")
+Rel_Serving(paymentApi, retry, "autorizza pagamento")
+Rel_Serving(orderApi, checkout, "piazza e consulta ordine")
+Rel_Serving(shipmentApi, tracking, "fornisce stato spedizione")
+Rel_Serving(customerOrdersApi, tracking, "elenca ordini cliente")
+
+Rel_Realization(checkoutComp, checkoutSvc, "coordina il flusso")
+Rel_Realization(cartComp, cartSvc, "calcola totale")
+Rel_Realization(paymentComp, paymentApi, "implementa API")
+Rel_Realization(orderComp, orderApi, "implementa API")
+Rel_Realization(shipmentComp, shipmentApi, "implementa API")
+Rel_Realization(orderComp, customerOrdersApi, "implementa API")
+
+Rel_Assignment(webapp, checkoutComp, "presenta il flusso")
+Rel_Assignment(checkoutComp, cartComp, "richiede Cart.total()")
+Rel_Assignment(checkoutComp, paymentComp, "applica retry e idempotenza")
+Rel_Assignment(checkoutComp, orderComp, "crea ordine dopo autorizzazione")
+Rel_Assignment(checkoutComp, shipmentComp, "richiede creazione interna shipment")
+
+Rel_Serving(https, checkoutComp, "trasporto delle API pubbliche")
+Rel_Serving(paymentProviderApi, paymentComp, "autorizzazione esterna")
+Rel_Serving(carrierApi, shipmentComp, "aggiornamento tracking")
+rectangle "Business" #FFF2CC
+rectangle "Application" #DDEBFF
+rectangle "Technology" #DFF2DF
+legend bottom
+  Giallo = business | Azzurro = applicazione | Verde = tecnologia
+  AR = requisito in architecture-requirements.md. L'OAS non definisce un endpoint
+  per Cart.total() né per createShipment(orderId): sono chiamate interne, non API.
+  I servizi di pagamento e corriere sono servizi applicativi esterni.
+  Runtime, storage e deployment restano da decidere (VIN-01).
+endlegend
+@enduml

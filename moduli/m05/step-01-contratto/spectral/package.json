@@ -1,0 +1,8 @@
+{
+  "name": "m05-spectral-governance",
+  "private": true,
+  "description": "Ruleset Spectral usati nella demo M05",
+  "devDependencies": {
+    "@stoplight/spectral-cli": "6.17.0"
+  }
+}

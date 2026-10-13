@@ -1,0 +1,45 @@
+@startuml
+title M04 — Vista logica dei componenti checkout
+left to right direction
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam wrapWidth 190
+skinparam maxMessageSize 120
+
+actor "Cliente" as customer
+
+package "Canale" #EAF2F8 {
+  component "Web Application\ncheckout e tracking" as web
+}
+
+package "Confine applicativo\nallocazione logica proposta" #E8F5E9 {
+  component "Checkout Orchestrator\ncoordina AR-01, AR-02, AR-03" as checkout
+  component "Cart\ncalcolo totale" as cart
+  component "Payment Service\nPOST /payments\nGET /payments/{paymentId}" as payment
+  component "Order Service\nPOST /orders\nGET /orders/{orderId}\nGET /customers/{customerId}/orders" as order
+  component "Shipment Service\nGET /orders/{orderId}/shipment\ncreazione shipment interna" as shipment
+}
+
+package "Sistemi esterni" #FFF8E1 {
+  component "Payment Gateway\n(test: simulato)" as gateway
+  component "Carrier API" as carrier
+}
+
+customer --> web : avvia checkout / consulta ordine
+web --> checkout : richiesta checkout
+checkout --> cart : Cart.total()\n[interazione interna; non OAS]
+checkout --> payment : autorizza importo\nmax 3 tentativi (AR-02)
+payment --> gateway : autorizzazione
+checkout --> order : POST /orders\nAR-03 — pagamento autorizzato
+checkout --> shipment : createShipment(orderId)\n[interno; non OAS] (AR-04)
+web --> order : GET /orders/{orderId}\nGET /customers/{customerId}/orders
+web --> shipment : GET /orders/{orderId}/shipment
+shipment --> carrier : richiesta aggiornamento tracking
+
+legend bottom
+  Le linee continue rappresentano dipendenze o invocazioni logiche.
+  Gli endpoint nei componenti sono quelli del contratto OAS. Non esiste un endpoint OAS per creare la shipment.
+  Le allocazioni dei servizi sono proposte; tecnologia e deployment restano da decidere.
+endlegend
+@enduml

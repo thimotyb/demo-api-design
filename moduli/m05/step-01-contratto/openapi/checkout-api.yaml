@@ -1,0 +1,323 @@
+openapi: 3.0.3
+info:
+  title: Checkout API - M05 demo profile
+  version: 1.0.0
+  description: >-
+    Profile ristretto derivato da caso-guida/req-apis.yaml per eseguire i playbook
+    Postman del checkout, dei retry di pagamento e del tracking. Gli esempi sono
+    fixture di mock; non descrivono transazioni reali.
+servers:
+  - url: http://127.0.0.1:4010
+    description: Server mock locale Prism
+security:
+  - BearerAuth: []
+paths:
+  /payments:
+    post:
+      operationId: authorizePayment
+      tags: [Payments]
+      summary: Authorize a payment
+      description: >-
+        Crea un tentativo di autorizzazione. Il client riutilizza la stessa
+        Idempotency-Key quando ripete la richiesta dopo un errore transitorio.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Chiave stabile riutilizzata in tutti i tentativi del playbook.
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentAuthorizationRequest'
+            examples:
+              checkout:
+                summary: Pagamento per il checkout dimostrativo
+                value:
+                  customerId: 11111111-1111-4111-8111-111111111111
+                  amount: { amount: 49.90, currency: EUR }
+                  paymentToken: tok_demo_visa
+      responses:
+        '201':
+          description: Authorization result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              examples:
+                authorized:
+                  summary: Autorizzazione riuscita al primo tentativo
+                  value:
+                    id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    customerId: 11111111-1111-4111-8111-111111111111
+                    amount: { amount: 49.90, currency: EUR }
+                    status: AUTHORIZED
+                    authorizationCode: AUTH-DEMO-001
+                    paymentToken: tok_demo_visa
+                    createdAt: '2026-01-01T10:00:00Z'
+                    updatedAt: '2026-01-01T10:00:00Z'
+                authorizedAfterRetry:
+                  summary: Esito finale autorizzato dopo retry simulati
+                  value:
+                    id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    customerId: 11111111-1111-4111-8111-111111111111
+                    amount: { amount: 49.90, currency: EUR }
+                    status: AUTHORIZED
+                    authorizationCode: AUTH-DEMO-RETRY
+                    paymentToken: tok_demo_visa
+                    createdAt: '2026-01-01T10:00:00Z'
+                    updatedAt: '2026-01-01T10:00:02Z'
+        '402':
+          description: Authorization failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                transientFailure:
+                  summary: Errore transitorio durante un tentativo
+                  value:
+                    code: TRANSIENT_GATEWAY_FAILURE
+                    message: Gateway temporaneamente non disponibile; ripetere con la stessa Idempotency-Key.
+                retriesExhausted:
+                  summary: Tre tentativi transitori esauriti
+                  value:
+                    code: RETRIES_EXHAUSTED
+                    message: Autorizzazione non completata dopo tre tentativi simulati.
+                declined:
+                  summary: Rifiuto definitivo del pagamento
+                  value:
+                    code: PAYMENT_DECLINED
+                    message: Pagamento rifiutato; non ripetere automaticamente la richiesta.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                invalidRequest:
+                  value: { code: INVALID_REQUEST, message: Richiesta non valida. }
+  /orders:
+    post:
+      operationId: placeOrder
+      tags: [Orders]
+      summary: Place an order from an authorized payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderCreateRequest' }
+            examples:
+              checkout:
+                summary: Ordine coerente con il pagamento autorizzato
+                value:
+                  customerId: 11111111-1111-4111-8111-111111111111
+                  paymentId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                  shippingAddressId: 22222222-2222-4222-8222-222222222222
+                  items:
+                    - productId: 33333333-3333-4333-8333-333333333333
+                      name: Demo product
+                      unitPrice: { amount: 49.90, currency: EUR }
+                      quantity: 1
+                      subtotal: { amount: 49.90, currency: EUR }
+      responses:
+        '201':
+          description: Order placed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+              examples:
+                checkoutPlaced:
+                  summary: Ordine pagato, pronto per il flusso di spedizione
+                  value:
+                    id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    customerId: 11111111-1111-4111-8111-111111111111
+                    status: PAID
+                    total: { amount: 49.90, currency: EUR }
+                    items:
+                      - productId: 33333333-3333-4333-8333-333333333333
+                        name: Demo product
+                        unitPrice: { amount: 49.90, currency: EUR }
+                        quantity: 1
+                        subtotal: { amount: 49.90, currency: EUR }
+                    paymentId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    createdAt: '2026-01-01T10:00:01Z'
+                    placedAt: '2026-01-01T10:00:01Z'
+                    updatedAt: '2026-01-01T10:00:01Z'
+        '400':
+          description: Invalid order request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                invalidOrder:
+                  value: { code: INVALID_ORDER, message: Ordine non valido. }
+        '402':
+          description: Payment authorization invalid
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                paymentRequired:
+                  value: { code: PAYMENT_REQUIRED, message: Ordine non creato perché il pagamento non è autorizzato. }
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      tags: [Orders]
+      summary: Get order details and current status
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+              examples:
+                orderWithShipment:
+                  value:
+                    id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    customerId: 11111111-1111-4111-8111-111111111111
+                    status: SHIPPED
+                    total: { amount: 49.90, currency: EUR }
+                    items: []
+                    paymentId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    shipmentId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+                    trackingCode: DEMO-TRACK-001
+                    createdAt: '2026-01-01T10:00:01Z'
+                    placedAt: '2026-01-01T10:00:01Z'
+                    updatedAt: '2026-01-01T10:05:00Z'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                notFound:
+                  value: { code: NOT_FOUND, message: Ordine non trovato. }
+  /orders/{orderId}/shipment:
+    get:
+      operationId: getOrderShipment
+      tags: [Orders]
+      summary: Retrieve shipment information for an order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Shipment tracking data
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Shipment' }
+              examples:
+                inTransit:
+                  value:
+                    id: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+                    trackingCode: DEMO-TRACK-001
+                    status: IN_TRANSIT
+                    estimatedDeliveryDate: '2026-01-05'
+                    lastUpdate: '2026-01-02T08:30:00Z'
+        '404':
+          description: Shipment not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                shipmentNotFound:
+                  value: { code: NOT_FOUND, message: Spedizione non trovata. }
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: number, format: double }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+    PaymentAuthorizationRequest:
+      type: object
+      required: [customerId, amount, paymentToken]
+      properties:
+        customerId: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/Money' }
+        paymentToken: { type: string }
+        metadata: { type: object, additionalProperties: { type: string } }
+    Payment:
+      type: object
+      required: [id, customerId, amount, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/Money' }
+        status: { type: string, enum: [INITIATED, AUTHORIZED, CAPTURED, FAILED] }
+        authorizationCode: { type: string, nullable: true }
+        paymentToken: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CartItemSnapshot:
+      type: object
+      required: [productId, name, unitPrice, quantity, subtotal]
+      properties:
+        productId: { type: string, format: uuid }
+        name: { type: string }
+        unitPrice: { $ref: '#/components/schemas/Money' }
+        quantity: { type: integer, minimum: 1 }
+        subtotal: { $ref: '#/components/schemas/Money' }
+    OrderCreateRequest:
+      type: object
+      required: [customerId, paymentId, shippingAddressId, items]
+      properties:
+        customerId: { type: string, format: uuid }
+        paymentId: { type: string, format: uuid }
+        shippingAddressId: { type: string, format: uuid }
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/CartItemSnapshot' }
+        notes: { type: string }
+    Order:
+      type: object
+      required: [id, customerId, status, total, items, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        status: { type: string, enum: [NEW, PAID, SHIPPED, DELIVERED, CANCELED] }
+        total: { $ref: '#/components/schemas/Money' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItemSnapshot' }
+        paymentId: { type: string, format: uuid, nullable: true }
+        shipmentId: { type: string, format: uuid, nullable: true }
+        trackingCode: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        placedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Shipment:
+      type: object
+      required: [id, trackingCode, status]
+      properties:
+        id: { type: string, format: uuid }
+        trackingCode: { type: string }
+        status: { type: string, enum: [CREATED, IN_TRANSIT, DELIVERED] }
+        estimatedDeliveryDate: { type: string, format: date, nullable: true }
+        lastUpdate: { type: string, format: date-time, nullable: true }

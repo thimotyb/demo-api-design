@@ -1,0 +1,96 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Customer {
+  +id: UUID
+  +email: String
+  +passwordHash: String
+  +addresses: List<Address>
+}
+
+class Address {
+  +street: String
+  +city: String
+  +zip: String
+  +country: String
+}
+
+class Product {
+  +id: UUID
+  +name: String
+  +price: Money
+  +stockQty: int
+}
+
+class Cart {
+  +id: UUID
+  +add(product: Product, qty: int)
+  +total(): Money
+}
+
+class CartItem {
+  +qty: int
+  +subtotal(): Money
+}
+
+class Order {
+  +id: UUID
+  +status: OrderStatus
+  +total: Money
+  +placeFrom(cart: Cart)
+}
+
+enum OrderStatus {
+  NEW
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+class Payment {
+  +id: UUID
+  +amount: Money
+  +status: PaymentStatus
+  +authorize()
+  +capture()
+}
+
+enum PaymentStatus {
+  INITIATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+}
+
+interface PaymentGateway {
+  +authorize(amount: Money, token: String): AuthResult
+  +capture(paymentId: UUID): CaptureResult
+}
+
+class StripeGateway
+
+class Shipment {
+  +trackingCode: String
+  +status: ShipmentStatus
+}
+
+enum ShipmentStatus {
+  CREATED
+  IN_TRANSIT
+  DELIVERED
+}
+
+class CarrierApi
+
+Customer "1" -- "0..1" Cart
+Cart "1" o-- "1..*" CartItem
+CartItem "*" --> "1" Product
+Order "1" *-- "1..*" CartItem : snapshot
+Order "1" --> "0..1" Payment
+Order "1" --> "0..1" Shipment
+Payment ..> PaymentGateway : uses
+StripeGateway ..|> PaymentGateway
+Shipment ..> CarrierApi : <<external>>
+
+@enduml

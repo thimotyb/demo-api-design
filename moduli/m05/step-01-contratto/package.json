@@ -1,0 +1,14 @@
+{
+  "name": "m05-api-sequence-playbooks",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local OpenAPI mock and Postman/Newman playbooks for course M05",
+  "scripts": {
+    "generate": "python3 scripts/generate_postman.py",
+    "test:playbooks": "bash scripts/run_playbooks.sh"
+  },
+  "devDependencies": {
+    "@stoplight/prism-cli": "5.16.0",
+    "newman": "6.2.2"
+  }
+}

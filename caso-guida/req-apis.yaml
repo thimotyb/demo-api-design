@@ -1,0 +1,626 @@
+openapi: 3.0.3
+info:
+  title: E-Commerce Customer, Order, and Payment APIs
+  version: 1.0.0
+  description: |
+    REST APIs for managing customers, orders, and payments in the e-commerce platform.
+    The specification reflects the behaviors described in the requirements document and
+    associated interaction sequence diagrams.
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://sandbox.api.example.com/v1
+    description: Sandbox
+tags:
+  - name: Customers
+    description: Manage customer accounts, authentication, and addresses.
+  - name: Orders
+    description: Place orders, retrieve status, and access shipment information.
+  - name: Payments
+    description: Authorize and capture payments tied to customer orders.
+security:
+  - BearerAuth: []
+paths:
+  /customers:
+    post:
+      tags: [Customers]
+      summary: Register a new customer account
+      description: Creates a customer with contact details and optional initial addresses.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreateRequest'
+      responses:
+        '201':
+          description: Customer created
+          headers:
+            Location:
+              description: URL of the newly created customer resource
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /customers/{customerId}:
+    get:
+      tags: [Customers]
+      summary: Retrieve a customer profile
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdParam'
+      responses:
+        '200':
+          description: Customer profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /customers/{customerId}/addresses:
+    get:
+      tags: [Customers]
+      summary: List stored addresses for a customer
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdParam'
+      responses:
+        '200':
+          description: Addresses for the customer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Customers]
+      summary: Add a new address to the customer profile
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressCreateRequest'
+      responses:
+        '201':
+          description: Address created
+          headers:
+            Location:
+              description: URL of the new address resource
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /customers/{customerId}/orders:
+    get:
+      tags: [Customers]
+      summary: List orders placed by a customer
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdParam'
+      responses:
+        '200':
+          description: Orders associated with the customer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderSummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /sessions:
+    post:
+      tags: [Customers]
+      summary: Authenticate a customer
+      description: Issues access tokens for customers who provide valid credentials.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreateRequest'
+      responses:
+        '200':
+          description: Authentication succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Place an order from a cart snapshot
+      description: |
+        Creates an order using the customer's cart snapshot and a previously authorized payment.
+        The request mirrors the checkout sequence by referencing the authorization and shipping details.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '201':
+          description: Order placed successfully
+          headers:
+            Location:
+              description: URL of the newly created order resource
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          description: Payment required or payment authorization invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /orders/{orderId}:
+    get:
+      tags: [Orders]
+      summary: Get order details and current status
+      parameters:
+        - $ref: '#/components/parameters/OrderIdParam'
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /orders/{orderId}/shipment:
+    get:
+      tags: [Orders]
+      summary: Retrieve shipment information for an order
+      parameters:
+        - $ref: '#/components/parameters/OrderIdParam'
+      responses:
+        '200':
+          description: Shipment tracking data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Authorize a payment
+      description: |
+        Attempts to authorize a payment amount for a customer using a payment token. Clients
+        should include an Idempotency-Key header when retrying failed requests, as depicted in the
+        payment retry sequence.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentAuthorizationRequest'
+      responses:
+        '201':
+          description: Payment authorization result
+          headers:
+            Location:
+              description: URL of the created payment resource
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          description: Authorization failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /payments/{paymentId}:
+    get:
+      tags: [Payments]
+      summary: Retrieve payment status
+      parameters:
+        - $ref: '#/components/parameters/PaymentIdParam'
+      responses:
+        '200':
+          description: Payment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payments/{paymentId}/capture:
+    post:
+      tags: [Payments]
+      summary: Capture an authorized payment
+      description: Captures funds for a previously authorized payment.
+      parameters:
+        - $ref: '#/components/parameters/PaymentIdParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCaptureRequest'
+      responses:
+        '200':
+          description: Updated payment after capture
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Capture conflict (e.g., already captured)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CustomerIdParam:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderIdParam:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentIdParam:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Unique key supplied by the client to ensure retries are processed idempotently.
+  responses:
+    BadRequest:
+      description: Invalid request payload or parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid authentication credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Requested resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Customer:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CustomerCreateRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressCreateRequest'
+    Address:
+      type: object
+      required: [id, street, city, zip, country]
+      properties:
+        id:
+          type: string
+          format: uuid
+        street:
+          type: string
+        city:
+          type: string
+        zip:
+          type: string
+        country:
+          type: string
+    AddressCreateRequest:
+      type: object
+      required: [street, city, zip, country]
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        zip:
+          type: string
+        country:
+          type: string
+    SessionCreateRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    SessionResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+          description: Token lifetime in seconds.
+    Order:
+      type: object
+      required: [id, customerId, status, total, items, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        total:
+          $ref: '#/components/schemas/Money'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemSnapshot'
+        paymentId:
+          type: string
+          format: uuid
+          nullable: true
+        shipmentId:
+          type: string
+          format: uuid
+          nullable: true
+        trackingCode:
+          type: string
+          nullable: true
+        placedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OrderSummary:
+      type: object
+      required: [id, status, total, placedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        total:
+          $ref: '#/components/schemas/Money'
+        placedAt:
+          type: string
+          format: date-time
+    OrderCreateRequest:
+      type: object
+      required: [customerId, paymentId, shippingAddressId, items]
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+          format: uuid
+        shippingAddressId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CartItemSnapshot'
+        notes:
+          type: string
+    OrderStatus:
+      type: string
+      enum: [NEW, PAID, SHIPPED, DELIVERED, CANCELED]
+    CartItemSnapshot:
+      type: object
+      required: [productId, name, unitPrice, quantity, subtotal]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        quantity:
+          type: integer
+          minimum: 1
+        subtotal:
+          $ref: '#/components/schemas/Money'
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code.
+    Shipment:
+      type: object
+      required: [id, trackingCode, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        trackingCode:
+          type: string
+        status:
+          $ref: '#/components/schemas/ShipmentStatus'
+        estimatedDeliveryDate:
+          type: string
+          format: date
+          nullable: true
+        lastUpdate:
+          type: string
+          format: date-time
+          nullable: true
+    ShipmentStatus:
+      type: string
+      enum: [CREATED, IN_TRANSIT, DELIVERED]
+    Payment:
+      type: object
+      required: [id, customerId, amount, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        authorizationCode:
+          type: string
+          nullable: true
+        paymentToken:
+          type: string
+          nullable: true
+        capturedAt:
+          type: string
+          format: date-time
+          nullable: true
+        failureReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PaymentStatus:
+      type: string
+      enum: [INITIATED, AUTHORIZED, CAPTURED, FAILED]
+    PaymentAuthorizationRequest:
+      type: object
+      required: [customerId, amount, paymentToken]
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        paymentToken:
+          type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    PaymentCaptureRequest:
+      type: object
+      properties:
+        amount:
+          $ref: '#/components/schemas/Money'
+      description: Optional partial capture amount; defaults to the authorized amount when omitted.
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: {}

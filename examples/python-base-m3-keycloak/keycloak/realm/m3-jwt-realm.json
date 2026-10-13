@@ -1,0 +1,34 @@
+{
+  "realm": "m3-jwt",
+  "enabled": true,
+  "displayName": "M3 JWT demo",
+  "clients": [
+    {
+      "clientId": "m3-fastapi-client",
+      "name": "M3 FastAPI Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "m3-fastapi-secret",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "client_credentials.use_refresh_token": "false"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "api-access",
+        "description": "Role used by the protected API example"
+      }
+    ]
+  }
+}
+
