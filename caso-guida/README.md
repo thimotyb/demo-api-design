@@ -1,7 +1,5 @@
 # Caso guida: checkout e pagamento
 
-Questi file sono una **copia invariata** del progetto locale [`plant-uml-example`](https://github.com/thimotyb/plant-uml-example), commit `654dfb269faada6a82d292f20a6346c039b5dd2b` (branch `main` al momento della copia). La copia rende le demo riproducibili senza dipendere dal repository fratello. I materiali sorgente sono in inglese; le istruzioni delle demo sono in italiano.
-
 | File | Uso |
 | --- | --- |
 | [`ecomm-requirements.md`](ecomm-requirements.md) | Casi d'uso, entità e sequenze in forma testuale |
