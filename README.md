@@ -13,6 +13,7 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 
 | Course module | Example | Notes |
 | --- | --- | --- |
+| 01 API Design Fundamentals | [`examples/m01-api-styles/`](examples/m01-api-styles/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL field-level cache and cost-based rate limiting; 42 tests |
 | 01 API Design Fundamentals | [`caso-guida/`](caso-guida/README.md) | Requirements, domain model, use cases, sequence diagrams and the source OpenAPI contract |
 | 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | Checkout prototype that works on the happy path and shows three API-level gaps (no retry, duplicate orders, unvalidated price) |
 | 02 FastAPI Core Concepts | [`examples/fastapi-first-steps/`](examples/fastapi-first-steps/README.md) | Minimal FastAPI app |
@@ -36,7 +37,13 @@ python3 scripts/check_m01.py
 (cd moduli/m03/step-02-speckit/demo-retry && python3 -m unittest -v)   # starter: 2 tests fail by design
 ```
 
-FastAPI examples need their own virtual environment:
+The M01 API-styles example has its own runner (virtual environment, gRPC code generation, tests and measurement):
+
+```bash
+examples/m01-api-styles/run_all.sh
+```
+
+The other FastAPI examples need their own virtual environment:
 
 ```bash
 cd examples/fastapi-first-steps
@@ -51,6 +58,7 @@ The Keycloak/JWT laboratory and the Prism/Newman playbooks have their own setup 
 
 - The Prism playbooks check fixed example responses. They do not verify retry internals, persistent order state or server-side idempotency; that needs a stateful FastAPI implementation and integration tests, which this repository does not contain yet.
 - The `demo-retry` starter fails two tests on purpose.
+- The M01 API-styles servers are in memory and single-process; its idempotency store would need a shared database or Redis in production, and gRPC bidirectional streaming is not covered.
 - The Keycloak values (`admin/admin`, client secret, realm) are local teaching fixtures.
 
 ## Not copied

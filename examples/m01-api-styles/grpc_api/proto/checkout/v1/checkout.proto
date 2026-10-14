@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package checkout.v1;
+
+// Internal service-to-service contract: the order service asks the shipment
+// service for carrier data. The public API for the web app stays REST/GraphQL.
+service ShipmentService {
+  // Unary call: one request, one response.
+  rpc GetShipment(GetShipmentRequest) returns (Shipment);
+
+  // Server streaming: the server sends the history and then each new
+  // carrier update on the same call, until the parcel is delivered.
+  rpc TrackShipment(TrackShipmentRequest) returns (stream ShipmentEvent);
+}
+
+enum ShipmentStatus {
+  SHIPMENT_STATUS_UNSPECIFIED = 0;  // proto3 default; never sent on purpose
+  CREATED = 1;
+  IN_TRANSIT = 2;
+  DELIVERED = 3;
+}
+
+message GetShipmentRequest {
+  string tracking_code = 1;
+}
+
+message TrackShipmentRequest {
+  string tracking_code = 1;
+}
+
+message ShipmentEvent {
+  ShipmentStatus status = 1;
+  string location = 2;
+  string occurred_at = 3;  // RFC 3339
+}
+
+message Shipment {
+  string tracking_code = 1;
+  string carrier = 2;
+  ShipmentStatus status = 3;
+  repeated ShipmentEvent events = 4;
+
+  // Compatible evolution: field 5 was added later. Old clients ignore it, old
+  // servers leave it empty. Numbers and names of removed fields stay reserved
+  // so they are never reused with another meaning.
+  string estimated_delivery = 5;
+  reserved 6;
+  reserved "legacy_eta";
+}
