@@ -46,7 +46,7 @@ cp "$DEMO_REPO/caso-guida/ecomm-requirements.md" checkout-retry/inputs/
 cp "$DEMO_REPO/caso-guida/req-seq-payment-retry.puml" checkout-retry/inputs/
 cp "$DEMO_REPO/caso-guida/req-seq-checkout-success.puml" checkout-retry/inputs/
 cp "$DEMO_REPO/caso-guida/req-apis.yaml" checkout-retry/inputs/
-cp "$DEMO_REPO/moduli/m01/step-01-prototipo/demo.py" checkout-retry/inputs/prototype-demo.py
+cp "$DEMO_REPO/moduli/m03/step-02-speckit/prototype-demo.py" checkout-retry/inputs/prototype-demo.py
 cp "$DEMO_REPO/moduli/m03/step-02-speckit/demo-retry/payment_retry.py" checkout-retry/
 cp "$DEMO_REPO/moduli/m03/step-02-speckit/demo-retry/test_payment_retry.py" checkout-retry/
 cd checkout-retry

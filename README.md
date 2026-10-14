@@ -7,20 +7,24 @@ Two source trees were merged here, each for the part of the course it supports:
 - **Python Base** — FastAPI, JWT and Keycloak examples (course modules 02 and 03).
 - **Augmented Coding** — the checkout case study (`caso-guida/`) and the specification, architecture, contract and playbook demos built on it (course modules 01, 04, 06 and 07).
 
+## Repository layout
+
+- `moduli/mNN/` is the home of the examples that belong to each course module. New examples are built here, module by module.
+- `examples/` is a provisional reference area. It holds copied source material (Python Base) that is integrated into the modules as the lessons are written; do not build new examples there.
+- `caso-guida/` is the shared checkout case.
+
 Folder names and READMEs inside the copied trees stay in Italian, as in their sources, so that provenance can be checked with a plain diff. The course lessons are the English reference.
 
 ## Course module → example map
 
 | Course module | Example | Notes |
 | --- | --- | --- |
-| 01 API Design Fundamentals | [`examples/m01-api-styles/`](examples/m01-api-styles/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL field-level cache and cost-based rate limiting; 42 tests |
+| 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL field-level cache and cost-based rate limiting; 42 tests |
 | 01 API Design Fundamentals | [`caso-guida/`](caso-guida/README.md) | Requirements, domain model, use cases, sequence diagrams and the source OpenAPI contract |
-| 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | Checkout prototype that works on the happy path and shows three API-level gaps (no retry, duplicate orders, unvalidated price) |
 | 02 FastAPI Core Concepts | [`examples/fastapi-first-steps/`](examples/fastapi-first-steps/README.md) | Minimal FastAPI app |
 | 02 FastAPI Core Concepts | [`examples/python-base-m3-keycloak/server/`](examples/python-base-m3-keycloak/server/app/) | Orders API: path parameters, Pydantic models, status codes, `Depends` |
 | 03 Authentication and Authorization | [`examples/python-base-m3-keycloak/`](examples/python-base-m3-keycloak/README.md) | Keycloak client credentials, JWT validation, Postman and generated Python client. Read [`SECURITY_AUDIT.md`](examples/python-base-m3-keycloak/SECURITY_AUDIT.md) first: audience verification is disabled in the source |
 | 04 Error Handling and Robustness | [`moduli/m03/step-02-speckit/demo-retry/`](moduli/m03/step-02-speckit/demo-retry/README.md) | Bounded retry for transient gateway failures, with tests |
-| 04 Error Handling and Robustness | [`moduli/m01/step-02-analisi/`](moduli/m01/step-02-analisi/README.md) | Review of the prototype's robustness gaps |
 | 05 Performance and Optimization | — | No example yet |
 | 06 Documentation and Developer Experience | [`moduli/m05/step-01-contratto/`](moduli/m05/step-01-contratto/README.md) | OpenAPI profile with named examples, Spectral rulesets |
 | 07 API Testing | [`moduli/m05/step-01-contratto/`](moduli/m05/step-01-contratto/README.md) | Prism mock, generated Postman collection, Newman playbooks |
@@ -29,21 +33,19 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 
 ## Quick start
 
-Python 3.10 or later is enough for the case-study demos; they use the standard library only.
+Python 3.10 or later is required. Module M01 has its own runner (virtual environment, gRPC code generation, tests and measurement):
 
 ```bash
-python3 moduli/m01/step-01-prototipo/demo.py
-python3 scripts/check_m01.py
-(cd moduli/m03/step-02-speckit/demo-retry && python3 -m unittest -v)   # starter: 2 tests fail by design
+moduli/m01/run_all.sh
 ```
 
-The M01 API-styles example has its own runner (virtual environment, gRPC code generation, tests and measurement):
+The retry demo uses the standard library only; its starter fails two tests by design:
 
 ```bash
-examples/m01-api-styles/run_all.sh
+(cd moduli/m03/step-02-speckit/demo-retry && python3 -m unittest -v)
 ```
 
-The other FastAPI examples need their own virtual environment:
+The FastAPI examples in `examples/` need their own virtual environment:
 
 ```bash
 cd examples/fastapi-first-steps
@@ -58,7 +60,7 @@ The Keycloak/JWT laboratory and the Prism/Newman playbooks have their own setup 
 
 - The Prism playbooks check fixed example responses. They do not verify retry internals, persistent order state or server-side idempotency; that needs a stateful FastAPI implementation and integration tests, which this repository does not contain yet.
 - The `demo-retry` starter fails two tests on purpose.
-- The M01 API-styles servers are in memory and single-process; its idempotency store would need a shared database or Redis in production, and gRPC bidirectional streaming is not covered.
+- The M01 servers are in memory and single-process; its idempotency store would need a shared database or Redis in production, and gRPC bidirectional streaming is not covered.
 - The Keycloak values (`admin/admin`, client secret, realm) are local teaching fixtures.
 
 ## Not copied
