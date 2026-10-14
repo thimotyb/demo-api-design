@@ -21,6 +21,7 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 | --- | --- | --- |
 | 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL field-level cache and cost-based rate limiting; 42 tests |
 | 01 API Design Fundamentals | [`caso-guida/`](caso-guida/README.md) | Requirements, domain model, use cases, sequence diagrams and the source OpenAPI contract |
+| 02 FastAPI Core Concepts | [`moduli/m02/`](moduli/m02/README.md) | The Orders API of the lesson in two small commented versions: synchronous (`orders_api/`) and `async def` (`orders_api_async/`) with a timing demo; 19 tests |
 | 02 FastAPI Core Concepts | [`examples/fastapi-first-steps/`](examples/fastapi-first-steps/README.md) | Minimal FastAPI app |
 | 02 FastAPI Core Concepts | [`examples/python-base-m3-keycloak/server/`](examples/python-base-m3-keycloak/server/app/) | Orders API: path parameters, Pydantic models, status codes, `Depends` |
 | 03 Authentication and Authorization | [`examples/python-base-m3-keycloak/`](examples/python-base-m3-keycloak/README.md) | Keycloak client credentials, JWT validation, Postman and generated Python client. Read [`SECURITY_AUDIT.md`](examples/python-base-m3-keycloak/SECURITY_AUDIT.md) first: audience verification is disabled in the source |
