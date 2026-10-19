@@ -138,18 +138,33 @@ class FakeGateway:
         self._flaky_seen = False
 
     def authorize(self, amount: Money, token: str) -> str:
+        # Count every call, including failed ones: tests use `calls` to check
+        # whether the gateway was really contacted (e.g. not on an idempotent replay).
         self.calls += 1
+
+        # Happy path: the payment is approved and we return an authorization code.
         if token == "tok_demo_visa":
             return f"AUTH-{self.calls:04d}"
+
+        # Definitive failure: the bank refused the payment. Retrying will not help,
+        # so the API stores this outcome and replays it for the same idempotency key.
         if token == "tok_declined":
             raise PaymentDeclined("Payment declined; do not retry automatically.")
+
+        # Permanent outage: the gateway is "down" and fails on every call. It shows a
+        # retryable error that never recovers, whatever the client does.
         if token == "tok_transient":
             raise TransientGatewayFailure("Gateway temporarily unavailable; retry with the same Idempotency-Key.")
+
+        # Recovering outage: fails on the first call only, then works. This simulates
+        # a real glitch and lets tests prove that a retry with the same key succeeds.
         if token == "tok_flaky":
             if not self._flaky_seen:
                 self._flaky_seen = True
                 raise TransientGatewayFailure("Gateway temporarily unavailable; retry with the same Idempotency-Key.")
             return f"AUTH-{self.calls:04d}"
+
+        # Any other token is a client error, not a gateway outcome.
         raise InvalidRequest(f"Unknown payment token: {token}")
 
 
@@ -234,29 +249,43 @@ class Store:
     # -- commands
     def authorize_payment(self, customer_id: str, amount: Money, token: str,
                           idempotency_key: str | None = None) -> PaymentResult:
+        # Step 1 - Validate the input. Invalid requests are rejected first and are
+        # never stored against an idempotency key.
         if customer_id not in self.customers:
             raise InvalidRequest(f"Unknown customer {customer_id}.")
         if amount.amount <= 0 or len(amount.currency) != 3:
             raise InvalidRequest("Amount must be positive and currency must be a 3-letter code.")
 
+        # Step 2 - Check the idempotency key. The fingerprint identifies "the same
+        # request": if the key was already used, we compare what was sent then and now.
         fingerprint = (customer_id, amount.amount, amount.currency, token)
         if idempotency_key is not None and idempotency_key in self._idempotency:
             stored_fingerprint, outcome = self._idempotency[idempotency_key]
+            # Same key but a different request: a client bug, so refuse it (409).
             if stored_fingerprint != fingerprint:
                 raise IdempotencyConflict("This Idempotency-Key was already used with a different request.")
+            # Same request, and the first attempt ended with a stored refusal:
+            # give the same refusal back without calling the gateway again.
             if isinstance(outcome, DomainError):
                 raise outcome
+            # Same request, and the first attempt succeeded: replay the stored
+            # payment instead of charging twice.
             return PaymentResult(outcome, replayed=True)
 
+        # Step 3 - First time we see this request: call the payment gateway.
         try:
             code = self.gateway.authorize(amount, token)
         except TransientGatewayFailure:
             raise  # not stored: the client must be able to retry with the same key
         except DomainError as error:
+            # A definitive refusal (e.g. card declined) is remembered, so a retry
+            # with the same key gets the same answer. Other errors are not stored.
             if idempotency_key is not None and isinstance(error, PaymentDeclined):
                 self._idempotency[idempotency_key] = (fingerprint, error)
             raise
 
+        # Step 4 - Success: create and store the payment, and remember it under the
+        # key so that a later retry is recognised as a replay.
         payment = Payment(f"p-{next(self._payment_ids):04d}", customer_id, amount, "AUTHORIZED", code)
         self.payments[payment.id] = payment
         if idempotency_key is not None:
