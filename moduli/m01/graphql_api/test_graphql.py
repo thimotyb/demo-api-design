@@ -34,6 +34,7 @@ def gql(client, query, variables=None):
     return response.json()
 
 
+# GraphQL fetches the order and its nested shipment in a single request, where REST needs two.
 def test_one_query_returns_the_order_and_its_shipment(client):
     body = gql(client, "{ order(id: \"o-1001\") { id status shipment { status lastEvent { location } } } }")
     assert "errors" not in body
@@ -42,22 +43,26 @@ def test_one_query_returns_the_order_and_its_shipment(client):
     assert order["shipment"] == {"status": "IN_TRANSIT", "lastEvent": {"location": "Bologna hub"}}
 
 
+# The response has exactly the fields named in the query and nothing else (no over-fetching).
 def test_the_response_contains_only_the_requested_fields(client):
     body = gql(client, "{ order(id: \"o-1001\") { id } }")
     assert body["data"] == {"order": {"id": "o-1001"}}
 
 
+# GraphQL reports failures in the body: HTTP 200, `data` is null and `errors` carries the domain code.
 def test_unknown_order_is_http_200_with_a_coded_error(client):
     body = gql(client, "{ order(id: \"nope\") { id } }")
     assert body["data"] is None
     assert body["errors"][0]["extensions"]["code"] == "ORDER_NOT_FOUND"
 
 
+# A query asking for a field that is not in the schema is rejected by validation and never executed.
 def test_invalid_query_is_rejected_before_execution(client):
     body = gql(client, "{ order(id: \"o-1001\") { doesNotExist } }")
     assert "doesNotExist" in body["errors"][0]["message"]
 
 
+# Idempotency in GraphQL: the same key twice returns the same payment, flagged `replayed`, with one gateway call.
 def test_payment_replay_with_the_same_key(client, store):
     first = gql(client, AUTHORIZE, payment_input(key="k-1"))["data"]["authorizePayment"]
     second = gql(client, AUTHORIZE, payment_input(key="k-1"))["data"]["authorizePayment"]
@@ -66,12 +71,14 @@ def test_payment_replay_with_the_same_key(client, store):
     assert store.gateway.calls == 1
 
 
+# Reusing a key with a different input returns an IDEMPOTENCY_CONFLICT error in the body.
 def test_same_key_with_a_different_request_is_a_coded_error(client):
     gql(client, AUTHORIZE, payment_input(key="k-2"))
     body = gql(client, AUTHORIZE, payment_input(key="k-2", amount="25.00"))
     assert body["errors"][0]["extensions"]["code"] == "IDEMPOTENCY_CONFLICT"
 
 
+# A temporary gateway failure is reported as an error, and the retry with the same key succeeds (AUTHORIZED).
 def test_transient_failure_then_retry_with_the_same_key(client, store):
     first = gql(client, AUTHORIZE, payment_input(token="tok_flaky", key="k-3"))
     second = gql(client, AUTHORIZE, payment_input(token="tok_flaky", key="k-3"))
@@ -80,6 +87,7 @@ def test_transient_failure_then_retry_with_the_same_key(client, store):
     assert store.gateway.calls == 2
 
 
+# Schema evolution: the new `total` field is added and the old ones are marked @deprecated, but old queries still work.
 def test_evolution_new_field_added_old_fields_deprecated(client):
     sdl = schema.as_str()
     assert "total: Money!" in sdl

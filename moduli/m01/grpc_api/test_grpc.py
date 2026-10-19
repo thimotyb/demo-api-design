@@ -17,6 +17,7 @@ async def stub():
     await server.stop(None)
 
 
+# A simple unary RPC: one request, one typed Shipment response.
 async def test_unary_call_returns_the_shipment(stub):
     shipment = await stub.GetShipment(pb.GetShipmentRequest(tracking_code="TRK-1001"))
     assert shipment.carrier == "Example Carrier"
@@ -24,6 +25,7 @@ async def test_unary_call_returns_the_shipment(stub):
     assert [e.location for e in shipment.events] == ["Milano depot", "Bologna hub"]
 
 
+# An unknown tracking code maps to gRPC NOT_FOUND, with the domain code in the trailing metadata.
 async def test_unknown_shipment_is_not_found_with_the_domain_code(stub):
     with pytest.raises(grpc.aio.AioRpcError) as error:
         await stub.GetShipment(pb.GetShipmentRequest(tracking_code="TRK-9999"))
@@ -31,24 +33,28 @@ async def test_unknown_shipment_is_not_found_with_the_domain_code(stub):
     assert dict(error.value.trailing_metadata())["x-error-code"] == "SHIPMENT_NOT_FOUND"
 
 
+# A malformed tracking code maps to gRPC INVALID_ARGUMENT.
 async def test_malformed_tracking_code_is_invalid_argument(stub):
     with pytest.raises(grpc.aio.AioRpcError) as error:
         await stub.GetShipment(pb.GetShipmentRequest(tracking_code="bad code"))
     assert error.value.code() == grpc.StatusCode.INVALID_ARGUMENT
 
 
+# The client deadline (timeout) ends a slow call with DEADLINE_EXCEEDED.
 async def test_deadline_cancels_a_slow_call(stub):
     with pytest.raises(grpc.aio.AioRpcError) as error:
         await stub.GetShipment(pb.GetShipmentRequest(tracking_code="TRK-SLOW"), timeout=0.2)
     assert error.value.code() == grpc.StatusCode.DEADLINE_EXCEEDED
 
 
+# Metadata sent by the client (x-request-id) reaches the server and comes back in the trailing metadata.
 async def test_metadata_travels_with_the_call(stub):
     call = stub.GetShipment(pb.GetShipmentRequest(tracking_code="TRK-1001"), metadata=(("x-request-id", "req-42"),))
     await call
     assert dict(await call.trailing_metadata())["x-request-id"] == "req-42"
 
 
+# Server streaming: the server sends past events first, then live updates, and closes the stream when the shipment is DELIVERED.
 async def test_server_streaming_sends_history_then_live_updates_until_delivered(stub):
     events = [e async for e in stub.TrackShipment(pb.TrackShipmentRequest(tracking_code="TRK-1001"))]
     assert [pb.ShipmentStatus.Name(e.status) for e in events] == [
@@ -56,6 +62,7 @@ async def test_server_streaming_sends_history_then_live_updates_until_delivered(
     assert events[-1].location == "Customer address"
 
 
+# A stream for an unknown shipment fails immediately with NOT_FOUND.
 async def test_stream_for_an_unknown_shipment_fails_with_not_found(stub):
     with pytest.raises(grpc.aio.AioRpcError) as error:
         async for _ in stub.TrackShipment(pb.TrackShipmentRequest(tracking_code="TRK-9999")):
@@ -63,6 +70,7 @@ async def test_stream_for_an_unknown_shipment_fails_with_not_found(stub):
     assert error.value.code() == grpc.StatusCode.NOT_FOUND
 
 
+# Protobuf evolution: bytes written before the new field existed still parse, and the new field takes its default value.
 async def test_old_message_without_the_new_field_still_parses(stub):
     # Compatible evolution: bytes written before field 5 existed are still valid.
     old = pb.Shipment(tracking_code="TRK-1001", carrier="X", status=pb.CREATED)
