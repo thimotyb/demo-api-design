@@ -80,6 +80,10 @@ def test_the_cache_is_per_field_not_per_query(client, store):
 def test_an_uncached_field_is_resolved_every_time(client, store):
     calls = []
     original = store.get_customer
+    # Spy: replace get_customer with a wrapper that records each customer id in
+    # `calls` and then runs the original method. The tuple evaluates both
+    # expressions in order (append, then original) and [1] returns the original's
+    # result, so the behaviour is unchanged and we can count how often it runs.
     store.get_customer = lambda cid: (calls.append(cid), original(cid))[1]
     post(client, '{ order(id: "o-1001") { customer { email } } }')
     post(client, '{ order(id: "o-1001") { customer { email } } }')

@@ -106,4 +106,7 @@ def test_v2_changes_the_order_shape_and_v1_is_unchanged(client):
 # REST can use plain HTTP caching: the shipment response carries a Cache-Control header, so no custom cache is needed.
 def test_shipment_response_is_cacheable_by_http_alone(client):
     response = client.get("/v1/orders/o-1001/shipment")
+    # "private": only the end user's own cache (their browser) may store this response.
+    # Shared caches such as a CDN or a proxy must not, because the content can be
+    # specific to the user. "max-age=30": the stored copy is fresh for 30 seconds.
     assert response.headers["Cache-Control"] == "private, max-age=30"
