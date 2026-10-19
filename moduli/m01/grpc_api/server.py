@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
 import grpc
+from grpc_reflection.v1alpha import reflection
 
 import grpc_api  # noqa: F401  (puts the generated code on sys.path)
 from checkout.v1 import checkout_pb2 as pb
@@ -71,13 +73,19 @@ class ShipmentService(pb_grpc.ShipmentServiceServicer):
 async def start_server(store: Store | None = None, address: str = "127.0.0.1:0", **options) -> tuple[grpc.aio.Server, int]:
     server = grpc.aio.server()
     pb_grpc.add_ShipmentServiceServicer_to_server(ShipmentService(store or Store(), **options), server)
+    # Reflection lets generic clients (grpcurl, grpcui, Postman) list the services and call them without the .proto file.
+    reflection.enable_server_reflection(
+        (pb.DESCRIPTOR.services_by_name["ShipmentService"].full_name, reflection.SERVICE_NAME), server)
     port = server.add_insecure_port(address)
     await server.start()
     return server, port
 
 
 async def main() -> None:
-    server, port = await start_server(address="127.0.0.1:50051")
+    # A visible pause between live updates, so a client such as Postman shows them one by one.
+    # SHIPMENT_STREAM_INTERVAL (seconds) changes it; the tests use their own, shorter interval.
+    interval = float(os.environ.get("SHIPMENT_STREAM_INTERVAL", "1.0"))
+    server, port = await start_server(address="127.0.0.1:50051", stream_interval=interval)
     print(f"ShipmentService listening on 127.0.0.1:{port}", flush=True)
     await server.wait_for_termination()
 

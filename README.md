@@ -19,7 +19,7 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 
 | Course module | Example | Notes |
 | --- | --- | --- |
-| 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL field-level cache and cost-based rate limiting; 42 tests |
+| 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL field-level cache and cost-based rate limiting; 43 tests |
 | 01 API Design Fundamentals | [`caso-guida/`](caso-guida/README.md) | Requirements, domain model, use cases, sequence diagrams and the source OpenAPI contract |
 | 02 FastAPI Core Concepts | [`moduli/m02/`](moduli/m02/README.md) | The Orders API of the lesson in two small commented versions: synchronous (`orders_api/`) and `async def` (`orders_api_async/`) with a timing demo; 19 tests |
 | 02 FastAPI Core Concepts | [`examples/fastapi-first-steps/`](examples/fastapi-first-steps/README.md) | Minimal FastAPI app |

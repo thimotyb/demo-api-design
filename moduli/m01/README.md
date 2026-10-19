@@ -37,7 +37,19 @@ Start each API by hand:
 . .venv/bin/activate
 uvicorn rest_api.app:app --port 8000        # http://127.0.0.1:8000/docs
 uvicorn graphql_api.app:app --port 8001     # http://127.0.0.1:8001/graphql (GraphiQL)
-python -m grpc_api.server                   # 127.0.0.1:50051
+python -m grpc_api.server                   # 127.0.0.1:50051; TrackShipment sends one live update per second
+```
+
+`SHIPMENT_STREAM_INTERVAL=0.2 python -m grpc_api.server` changes the pause between live updates (seconds).
+
+The gRPC server has reflection enabled, so a generic client can explore it without the `.proto` file. With [grpcurl](https://github.com/fullstorydev/grpcurl), installed by [`grpc_api/install_grpcurl.sh`](grpc_api/install_grpcurl.sh) (Linux and macOS, no sudo; into `~/.local/bin` or the directory you pass; the download is checked against a pinned SHA-256):
+
+```bash
+grpc_api/install_grpcurl.sh
+grpcurl -plaintext 127.0.0.1:50051 list
+grpcurl -plaintext 127.0.0.1:50051 describe checkout.v1.ShipmentService
+grpcurl -plaintext -d '{"tracking_code": "TRK-1001"}' 127.0.0.1:50051 checkout.v1.ShipmentService/GetShipment
+grpcurl -plaintext -d '{"tracking_code": "TRK-1001"}' 127.0.0.1:50051 checkout.v1.ShipmentService/TrackShipment
 ```
 
 ## Measured difference (REST vs GraphQL)

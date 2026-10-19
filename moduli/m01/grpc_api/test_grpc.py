@@ -1,5 +1,6 @@
 import grpc
 import pytest
+from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
 
 import grpc_api  # noqa: F401
 from checkout.v1 import checkout_pb2 as pb
@@ -76,3 +77,19 @@ async def test_old_message_without_the_new_field_still_parses(stub):
     old = pb.Shipment(tracking_code="TRK-1001", carrier="X", status=pb.CREATED)
     parsed = pb.Shipment.FromString(old.SerializeToString())
     assert parsed.estimated_delivery == ""
+
+
+# Server reflection lets generic clients (grpcurl, grpcui) list the services without the .proto file.
+async def test_reflection_lists_the_shipment_service():
+    server, port = await start_server(Store())
+    try:
+        async with grpc.aio.insecure_channel(f"127.0.0.1:{port}") as channel:
+            async def requests():
+                yield reflection_pb2.ServerReflectionRequest(list_services="")
+
+            call = reflection_pb2_grpc.ServerReflectionStub(channel).ServerReflectionInfo(requests())
+            response = await call.read()
+            names = [service.name for service in response.list_services_response.service]
+        assert "checkout.v1.ShipmentService" in names
+    finally:
+        await server.stop(None)
