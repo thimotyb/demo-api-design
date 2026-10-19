@@ -1,0 +1,15 @@
+{
+  "name": "checkout-developer-portal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "zudoku dev",
+    "build": "zudoku build",
+    "preview": "zudoku preview"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zudoku": "0.93.0"
+  }
+}

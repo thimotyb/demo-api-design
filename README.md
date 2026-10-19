@@ -28,6 +28,7 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 | 04 Error Handling and Robustness | [`moduli/m03/step-02-speckit/demo-retry/`](moduli/m03/step-02-speckit/demo-retry/README.md) | Bounded retry for transient gateway failures, with tests |
 | 05 Performance and Optimization | — | No example yet |
 | 06 Documentation and Developer Experience | [`moduli/m05/step-01-contratto/`](moduli/m05/step-01-contratto/README.md) | OpenAPI profile with named examples, Spectral rulesets |
+| 06 Documentation and Developer Experience | [`moduli/m06/zudoku-portal/`](moduli/m06/zudoku-portal/README.md) | Zudoku developer portal: MDX guides plus the API reference built from the M05 contract (Node.js 22.22+) |
 | 07 API Testing | [`moduli/m05/step-01-contratto/`](moduli/m05/step-01-contratto/README.md) | Prism mock, generated Postman collection, Newman playbooks |
 | 07 API Testing | [`moduli/m03/step-02-speckit/demo-retry/`](moduli/m03/step-02-speckit/demo-retry/README.md) | `unittest` suite that fails on the starter and passes on the reference solution |
 | Case design material | [`moduli/m03/`](moduli/m03/README.md), [`moduli/m04/`](moduli/m04/README.md) | Spec Kit artifacts, architecture and ArchiMate views with a traceability matrix |

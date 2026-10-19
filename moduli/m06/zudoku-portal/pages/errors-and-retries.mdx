@@ -1,0 +1,15 @@
+---
+title: Errors and retries
+---
+
+# Errors and retries
+
+Payment authorization can fail for a transient reason, such as a gateway that is temporarily unavailable.
+
+1. Send `POST /payments` with an `Idempotency-Key` header.
+2. If the response reports a transient failure, wait and send the request again **with the same key**.
+3. Stop after the retry limit and show the customer a clear message.
+
+The contract names four payment outcomes: `authorized`, `transientFailure`, `retriesExhausted` and `declined`. Select an example in the [payments reference](/api/payments) to see each response body.
+
+A guide like this one states the intended client behavior. The portal does not enforce it: whether the server honors the key depends on its implementation.
