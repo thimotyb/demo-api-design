@@ -3,7 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "plantuml:start": "../scripts/plantuml-server.sh start",
+    "plantuml:stop": "../scripts/plantuml-server.sh stop",
+    "predev": "npm run plantuml:start",
     "dev": "zudoku dev",
+    "prebuild": "npm run plantuml:start",
     "build": "zudoku build",
     "preview": "zudoku preview"
   },
