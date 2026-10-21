@@ -70,3 +70,21 @@ def test_missing_token_is_401_not_403():
 
 def test_root_stays_public():
     assert client.get("/").status_code == 200
+
+
+# OpenAPI: the contract declares how the API is protected ------------------------------
+
+def test_openapi_declares_the_client_credentials_scheme():
+    """The scheme in the OpenAPI document is what shows the Authorize button in /docs."""
+    scheme = client.get("/openapi.json").json()["components"]["securitySchemes"]["OAuth2ClientCredentials"]
+    assert scheme["type"] == "oauth2"
+    assert scheme["flows"]["clientCredentials"]["tokenUrl"].endswith("/protocol/openid-connect/token")
+
+
+def test_openapi_marks_the_orders_operations_as_protected_and_root_as_public():
+    paths = client.get("/openapi.json").json()["paths"]
+    for path, method in [("/orders", "get"), ("/orders", "post"), ("/orders/{order_id}", "get"), ("/orders/{order_id}/lines", "get")]:
+        operation = paths[path][method]
+        assert operation["security"] == [{"OAuth2ClientCredentials": []}]
+        assert {"401", "403"} <= set(operation["responses"])
+    assert "security" not in paths["/"]["get"]

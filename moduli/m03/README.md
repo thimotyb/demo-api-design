@@ -117,5 +117,6 @@ cd server && python -m pytest
 - The realm is imported automatically at Keycloak startup.
 - The API verifies the JWT using the realm public keys exposed by Keycloak.
 - The protected endpoint checks the `azp` claim and accepts only tokens minted for the configured clients (`KEYCLOAK_EXPECTED_AZP`, a comma-separated list).
+- The API declares the OAuth2 client credentials flow as a security scheme (`OAuth2ClientCredentials`, token URL `KEYCLOAK_TOKEN_URL`), so `http://127.0.0.1:8001/docs` shows the **Authorize** button and a lock on each protected operation. In the dialog enter a client id and secret (for example `m3-readonly-client` / `m3-readonly-secret`): Swagger UI gets the token from Keycloak, which accepts the request because the clients list `http://localhost:8001` and `http://127.0.0.1:8001` as web origins (CORS).
 - Authorization uses realm roles: the `GET` endpoints require `orders:read` and `POST /orders` requires `orders:write` (the `require_role` dependency in `server/app/main.py`). A valid token without the role gets `403`.
 - If you prefer Docker, `docker-compose.yml` remains available as an alternative launch path.

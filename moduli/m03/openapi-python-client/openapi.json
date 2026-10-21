@@ -35,7 +35,7 @@
         "operationId": "list_orders",
         "security": [
           {
-            "bearerAuth": []
+            "OAuth2ClientCredentials": []
           }
         ],
         "responses": {
@@ -54,6 +54,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       },
@@ -62,7 +65,7 @@
         "operationId": "create_order",
         "security": [
           {
-            "bearerAuth": []
+            "OAuth2ClientCredentials": []
           }
         ],
         "requestBody": {
@@ -88,6 +91,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       }
@@ -98,7 +104,7 @@
         "operationId": "get_order",
         "security": [
           {
-            "bearerAuth": []
+            "OAuth2ClientCredentials": []
           }
         ],
         "parameters": [
@@ -125,6 +131,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
@@ -137,7 +146,7 @@
         "operationId": "list_order_lines",
         "security": [
           {
-            "bearerAuth": []
+            "OAuth2ClientCredentials": []
           }
         ],
         "parameters": [
@@ -167,6 +176,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
@@ -176,10 +188,15 @@
   },
   "components": {
     "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
+      "OAuth2ClientCredentials": {
+        "type": "oauth2",
+        "description": "Client credentials flow of the Keycloak realm m3-jwt",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:8080/realms/m3-jwt/protocol/openid-connect/token",
+            "scopes": {}
+          }
+        }
       }
     },
     "responses": {
@@ -188,6 +205,9 @@
       },
       "NotFound": {
         "description": "Requested order not found"
+      },
+      "Forbidden": {
+        "description": "Valid token without the required role (orders:read or orders:write)"
       }
     },
     "schemas": {

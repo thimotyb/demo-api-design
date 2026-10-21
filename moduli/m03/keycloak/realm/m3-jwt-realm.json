@@ -16,7 +16,10 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "redirectUris": [],
-      "webOrigins": [],
+      "webOrigins": [
+        "http://localhost:8001",
+        "http://127.0.0.1:8001"
+      ],
       "attributes": {
         "client_credentials.use_refresh_token": "false"
       }
@@ -34,7 +37,10 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "redirectUris": [],
-      "webOrigins": [],
+      "webOrigins": [
+        "http://localhost:8001",
+        "http://127.0.0.1:8001"
+      ],
       "attributes": {
         "client_credentials.use_refresh_token": "false"
       }

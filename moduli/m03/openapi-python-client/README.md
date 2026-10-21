@@ -4,7 +4,7 @@ This folder is a ready-to-use example for `openapi-python-client` based on the M
 
 ## What is inside
 
-- `openapi.json`: OpenAPI snapshot for the M3 Orders API
+- `openapi.json`: OpenAPI snapshot for the M3 Orders API, with the `OAuth2ClientCredentials` security scheme and the `401` and `403` responses (the live server publishes the same scheme at `/openapi.json`)
 - `generate_client.py`: helper that regenerates a client package if `openapi-python-client` is installed
 - `m3_orders_api_demo_client/`: lightweight client package that matches the M3 API shape
 - `demo.py`: end-to-end example that fetches a Keycloak token and calls the protected endpoints

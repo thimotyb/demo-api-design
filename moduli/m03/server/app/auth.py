@@ -16,6 +16,11 @@ def get_settings() -> dict[str, str]:
             "KEYCLOAK_JWKS_URL",
             "http://localhost:8080/realms/m3-jwt/protocol/openid-connect/certs",
         ),
+        # Where Swagger UI and other clients get a token: it appears in the OpenAPI security scheme.
+        "token_url": os.getenv(
+            "KEYCLOAK_TOKEN_URL",
+            "http://localhost:8080/realms/m3-jwt/protocol/openid-connect/token",
+        ),
         # Comma-separated list of the client applications whose tokens are accepted.
         "allowed_azp": os.getenv("KEYCLOAK_EXPECTED_AZP", "m3-fastapi-client,m3-readonly-client").split(","),
     }
