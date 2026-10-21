@@ -15,6 +15,10 @@ This example shows a complete OAuth2 `client_credentials` flow with:
 4. The client authenticates against Keycloak and then calls the protected endpoint.
 5. Postman can reproduce the same flow step by step.
 
+## Related example
+
+- [`fastapi-password-flow/`](fastapi-password-flow/README.md): the FastAPI OAuth2 password-flow tutorial in four steps (the last with password hashing and JWT), without an external identity provider.
+
 ## Folder layout
 
 - `scripts/start-keycloak-local.py`: launcher for a local Keycloak distribution
