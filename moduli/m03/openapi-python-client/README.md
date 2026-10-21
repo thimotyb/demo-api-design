@@ -14,21 +14,21 @@ This folder is a ready-to-use example for `openapi-python-client` based on the M
 1. Start the M3 stack from the example root:
 
 ```bash
-cd /home/thimoty/git/python-base/examples/m3-keycloak-client-credentials
+cd moduli/m03
 python scripts/start-keycloak-local.py
 ```
 
 2. In another shell, start the API server:
 
 ```bash
-cd /home/thimoty/git/python-base/examples/m3-keycloak-client-credentials/server
+cd moduli/m03/server
 uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 3. Run the demo client:
 
 ```bash
-cd /home/thimoty/git/python-base/examples/m3-keycloak-client-credentials/openapi-python-client
+cd moduli/m03/openapi-python-client
 python demo.py
 ```
 
@@ -37,7 +37,7 @@ python demo.py
 If you want to rebuild a generated client package from the snapshot, install the generator and run the helper:
 
 ```bash
-cd /home/thimoty/git/python-base/examples/m3-keycloak-client-credentials/openapi-python-client
+cd moduli/m03/openapi-python-client
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt

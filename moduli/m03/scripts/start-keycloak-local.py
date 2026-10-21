@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--install-dir",
         default=None,
-        help="Where to extract the Keycloak distribution (default: examples/.../.keycloak/keycloak-<version>)",
+        help="Where to extract the Keycloak distribution (default: moduli/m03/.keycloak/keycloak-<version>)",
     )
     return parser
 
