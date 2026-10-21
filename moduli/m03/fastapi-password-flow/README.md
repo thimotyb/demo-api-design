@@ -29,10 +29,10 @@ curl -s -X POST http://127.0.0.1:8000/token -d "username=johndoe&password=secret
 curl -s http://127.0.0.1:8000/users/me -H "Authorization: Bearer johndoe"
 ```
 
-With step 4 the token is a JWT and the route has a trailing slash:
+With step 4 the token is a JWT and the route has a trailing slash (the first command needs [`jq`](https://jqlang.org)):
 
 ```bash
-TOKEN=$(curl -s -X POST http://127.0.0.1:8000/token -d "username=johndoe&password=secret" | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
+TOKEN=$(curl -s -X POST http://127.0.0.1:8000/token -d "username=johndoe&password=secret" | jq -r .access_token)
 curl -s http://127.0.0.1:8000/users/me/ -H "Authorization: Bearer $TOKEN"
 ```
 
