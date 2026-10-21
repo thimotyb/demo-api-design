@@ -18,9 +18,9 @@ La validazione del claim `aud` è disabilitata. Secondo RFC 7519, il server dell
 
 ## MEDIA PRIORITÀ
 
-### 2. Nessun RBAC applicato — `main.py` (tutti gli endpoint)
+### 2. ~~Nessun RBAC applicato~~ — risolto
 
-Il realm definisce il ruolo `api-access` ma il server non lo verifica mai. Qualsiasi service account del realm può chiamare tutti gli endpoint senza restrizioni di ruolo.
+Originariamente il realm definiva un ruolo `api-access` che il server non verificava mai, quindi qualsiasi service account del realm poteva chiamare tutti gli endpoint. Ora il realm definisce `orders:read` e `orders:write`, assegnati ai service account dei due client, e `main.py` li verifica con la dipendenza `require_role` (`403` se manca il ruolo). Restano non coperti: i ruoli per risorsa (ogni client legge ancora tutti gli ordini, vedi il punto 3) e gruppi o ruoli compositi.
 
 ### 3. Order ID sequenziale prevedibile — `orders.py:46`
 

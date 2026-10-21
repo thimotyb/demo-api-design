@@ -23,7 +23,7 @@ This example shows a complete OAuth2 `client_credentials` flow with:
 
 - `scripts/start-keycloak-local.py`: launcher for a local Keycloak distribution
 - `docker-compose.yml`: optional Docker-based alternative
-- `keycloak/realm/m3-jwt-realm.json`: imported realm with a confidential client
+- `keycloak/realm/m3-jwt-realm.json`: imported realm with two confidential clients, the realm roles `orders:read` and `orders:write` and the service accounts that hold them
 - `server/`: FastAPI resource server
 - `client/`: script that authenticates and calls the API
 - `postman/`: collection and playbook
@@ -93,9 +93,29 @@ Realm:
 
 - `m3-jwt`
 
+## Roles
+
+| Client | Secret | Realm roles of its service account | Can do |
+| --- | --- | --- | --- |
+| `m3-fastapi-client` | `m3-fastapi-secret` | `orders:read`, `orders:write` | read and create orders |
+| `m3-readonly-client` | `m3-readonly-secret` | `orders:read` | read orders; `POST /orders` returns `403` |
+
+In the Keycloak console, switch to the realm `M3 JWT demo`. The roles are under **Realm roles**. The roles of a client are under **Clients → the client → Service account roles**. The roles appear in the access token in the claim `realm_access.roles`.
+
+The realm is imported only when it does not exist yet. If you started Keycloak before this change, delete the realm `m3-jwt` in the console, or delete `.keycloak/keycloak-<version>/data/h2`, and start Keycloak again.
+
+The role tests do not need Keycloak:
+
+```bash
+. .venv/bin/activate
+pip install pytest httpx
+cd server && python -m pytest
+```
+
 ## Notes
 
 - The realm is imported automatically at Keycloak startup.
 - The API verifies the JWT using the realm public keys exposed by Keycloak.
-- The protected endpoint checks the `azp` claim and accepts only tokens minted for the configured client.
+- The protected endpoint checks the `azp` claim and accepts only tokens minted for the configured clients (`KEYCLOAK_EXPECTED_AZP`, a comma-separated list).
+- Authorization uses realm roles: the `GET` endpoints require `orders:read` and `POST /orders` requires `orders:write` (the `require_role` dependency in `server/app/main.py`). A valid token without the role gets `403`.
 - If you prefer Docker, `docker-compose.yml` remains available as an alternative launch path.

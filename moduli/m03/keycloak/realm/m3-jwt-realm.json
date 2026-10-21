@@ -20,15 +20,55 @@
       "attributes": {
         "client_credentials.use_refresh_token": "false"
       }
+    },
+    {
+      "clientId": "m3-readonly-client",
+      "name": "M3 Read-only Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "m3-readonly-secret",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "client_credentials.use_refresh_token": "false"
+      }
     }
   ],
   "roles": {
     "realm": [
       {
-        "name": "api-access",
-        "description": "Role used by the protected API example"
+        "name": "orders:read",
+        "description": "Read orders: GET endpoints of the Orders API"
+      },
+      {
+        "name": "orders:write",
+        "description": "Create orders: POST /orders of the Orders API"
       }
     ]
-  }
+  },
+  "users": [
+    {
+      "username": "service-account-m3-fastapi-client",
+      "enabled": true,
+      "serviceAccountClientId": "m3-fastapi-client",
+      "realmRoles": [
+        "orders:read",
+        "orders:write"
+      ]
+    },
+    {
+      "username": "service-account-m3-readonly-client",
+      "enabled": true,
+      "serviceAccountClientId": "m3-readonly-client",
+      "realmRoles": [
+        "orders:read"
+      ]
+    }
+  ]
 }
-

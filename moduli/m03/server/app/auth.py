@@ -16,7 +16,8 @@ def get_settings() -> dict[str, str]:
             "KEYCLOAK_JWKS_URL",
             "http://localhost:8080/realms/m3-jwt/protocol/openid-connect/certs",
         ),
-        "expected_azp": os.getenv("KEYCLOAK_EXPECTED_AZP", "m3-fastapi-client"),
+        # Comma-separated list of the client applications whose tokens are accepted.
+        "allowed_azp": os.getenv("KEYCLOAK_EXPECTED_AZP", "m3-fastapi-client,m3-readonly-client").split(","),
     }
 
 
@@ -47,8 +48,8 @@ def decode_access_token(token: str) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    # The demo accepts only tokens minted for the expected client application.
-    if payload.get("azp") != settings["expected_azp"]:
+    # The demo accepts only tokens minted for the expected client applications.
+    if payload.get("azp") not in settings["allowed_azp"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Token was not issued for the expected client",
@@ -70,3 +71,8 @@ def fetch_token(token_url: str, client_id: str, client_secret: str) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def token_roles(payload: dict) -> set[str]:
+    # Keycloak puts the realm roles of the identity in the realm_access.roles claim.
+    return set(payload.get("realm_access", {}).get("roles", []))

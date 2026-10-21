@@ -23,6 +23,9 @@ The scripts store `access_token`, `order_id`, and `created_order_id` in the sele
 6. Run `04 - Create order`.
 7. Check that the new order id is stored in `created_order_id`.
 8. Run `05 - Get created order lines`.
+9. Run `06 - Get access token (read-only client)`. The token is stored in `readonly_access_token`.
+10. Run `07 - Create order with the read-only token (expect 403)`: the client has `orders:read` but not `orders:write`, so the API answers `403`.
+11. Run `08 - List orders with the read-only token (expect 200)`: reading still works.
 
 ## What the collection does
 
@@ -32,3 +35,4 @@ The scripts store `access_token`, `order_id`, and `created_order_id` in the sele
 - It reads one order detail.
 - It creates a new order with header and lines.
 - It reads back the lines of the created order.
+- It repeats the token request with a read-only client and shows that creating an order is refused with `403` while reading still works.
