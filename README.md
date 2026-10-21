@@ -23,15 +23,14 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 | 01 API Design Fundamentals | [`caso-guida/`](caso-guida/README.md) | Requirements, domain model, use cases, sequence diagrams and the source OpenAPI contract |
 | 02 FastAPI Core Concepts | [`moduli/m02/`](moduli/m02/README.md) | The Orders API of the lesson in two small commented versions: synchronous (`orders_api/`) and `async def` (`orders_api_async/`) with a timing demo; 19 tests |
 | 02 FastAPI Core Concepts | [`examples/fastapi-first-steps/`](examples/fastapi-first-steps/README.md) | Minimal FastAPI app |
-| 02 FastAPI Core Concepts | [`examples/python-base-m3-keycloak/server/`](examples/python-base-m3-keycloak/server/app/) | Orders API: path parameters, Pydantic models, status codes, `Depends` |
-| 03 Authentication and Authorization | [`examples/python-base-m3-keycloak/`](examples/python-base-m3-keycloak/README.md) | Keycloak client credentials, JWT validation, Postman and generated Python client. Read [`SECURITY_AUDIT.md`](examples/python-base-m3-keycloak/SECURITY_AUDIT.md) first: audience verification is disabled in the source |
-| 04 Error Handling and Robustness | [`moduli/m03/step-02-speckit/demo-retry/`](moduli/m03/step-02-speckit/demo-retry/README.md) | Bounded retry for transient gateway failures, with tests |
+| 03 Authentication and Authorization | [`moduli/m03/`](moduli/m03/README.md) | Keycloak client credentials, JWT validation, Postman and generated Python client. Read [`SECURITY_AUDIT.md`](moduli/m03/SECURITY_AUDIT.md) first: audience verification is disabled in the source |
+| 04 Error Handling and Robustness | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md) | Bounded retry for transient gateway failures, with tests |
 | 05 Performance and Optimization | — | No example yet |
-| 06 Documentation and Developer Experience | [`moduli/m05/step-01-contratto/`](moduli/m05/step-01-contratto/README.md) | OpenAPI profile with named examples, Spectral rulesets |
+| 06 Documentation and Developer Experience | [`moduli/m05/`](moduli/m05/README.md) | OpenAPI profile with named examples, Spectral rulesets |
 | 06 Documentation and Developer Experience | [`moduli/m06/zudoku-portal/`](moduli/m06/zudoku-portal/README.md) | Zudoku developer portal: MDX guides plus the API reference built from the M05 contract (Node.js 22.22+) |
-| 07 API Testing | [`moduli/m05/step-01-contratto/`](moduli/m05/step-01-contratto/README.md) | Prism mock, generated Postman collection, Newman playbooks |
-| 07 API Testing | [`moduli/m03/step-02-speckit/demo-retry/`](moduli/m03/step-02-speckit/demo-retry/README.md) | `unittest` suite that fails on the starter and passes on the reference solution |
-| Case design material | [`moduli/m03/`](moduli/m03/README.md), [`moduli/m04/`](moduli/m04/README.md) | Spec Kit artifacts, architecture and ArchiMate views with a traceability matrix |
+| 07 API Testing | [`moduli/m05/`](moduli/m05/README.md) | Prism mock, generated Postman collection, Newman playbooks |
+| 07 API Testing | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md) | `unittest` suite that fails on the starter and passes on the reference solution |
+| Case design material | [`moduli/m04/architecture/`](moduli/m04/architecture/README.md) | Architecture and ArchiMate views with a traceability matrix |
 
 ## Quick start
 
@@ -44,7 +43,7 @@ moduli/m01/run_all.sh
 The retry demo uses the standard library only; its starter fails two tests by design:
 
 ```bash
-(cd moduli/m03/step-02-speckit/demo-retry && python3 -m unittest -v)
+(cd moduli/m04/demo-retry && python3 -m unittest -v)
 ```
 
 The FastAPI examples in `examples/` need their own virtual environment:
