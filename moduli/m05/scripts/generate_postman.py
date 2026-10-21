@@ -14,7 +14,7 @@ import yaml
 
 HERE = Path(__file__).resolve().parents[1]
 CONTRACT = HERE / "openapi" / "checkout-api.yaml"
-UPSTREAM_CONTRACT = HERE.parents[2] / "caso-guida" / "req-apis.yaml"
+UPSTREAM_CONTRACT = HERE.parents[1] / "caso-guida" / "req-apis.yaml"
 SCENARIOS = HERE / "scenarios" / "postman-playbooks.yaml"
 OUTPUT = HERE / "postman" / "checkout-sequence-playbooks.postman_collection.json"
 

@@ -2,7 +2,7 @@
 
 A small [Zudoku](https://zudoku.dev) site that publishes the checkout contract as an API reference next to hand-written guides.
 
-- `zudoku.config.ts` — site title, navigation and the OpenAPI source. The source is the contract of [`../../m05/step-01-contratto/openapi/checkout-api.yaml`](../../m05/step-01-contratto/openapi/checkout-api.yaml), so the reference cannot drift from the contract used by the mock.
+- `zudoku.config.ts` — site title, navigation and the OpenAPI source. The source is the contract of [`../../m05/openapi/checkout-api.yaml`](../../m05/openapi/checkout-api.yaml), so the reference cannot drift from the contract used by the mock.
 - `zudoku.build.ts` — a build-time processor that renders `../../../caso-guida/req-seq-payment-retry.puml` to SVG through the PlantUML server and appends it to the `POST /payments` description. The contract is not modified, and `public/diagrams/` is generated (not committed).
 - `pages/*.mdx` — the guides (introduction, errors and retries).
 
@@ -21,5 +21,5 @@ npm run plantuml:stop   # stop the PlantUML server when you are done
 ## What it does not show
 
 - The page content and the examples are fixtures from the mock profile. The portal renders the contract; it does not verify retry, persistence or server-side idempotency.
-- The playground sends requests to the server URL in the contract (the Prism mock on `127.0.0.1:4010`). Start the mock from `../../m05/step-01-contratto/` first.
+- The playground sends requests to the server URL in the contract (the Prism mock on `127.0.0.1:4010`). Start the mock from `../../m05/` first.
 - API keys, subscriptions and per-user access need a gateway or an API management product; this site is static documentation.
