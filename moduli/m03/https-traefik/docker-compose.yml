@@ -1,0 +1,51 @@
+# HTTPS in front of the M3 laboratory: Traefik ends TLS for the API and for Keycloak.
+# Autonomous: it does not touch the plain HTTP laboratory of the parent folder (it only builds
+# the API image from ../server). Run certs/make-certs.sh first.
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.web.address=:80
+      # Every plain HTTP request is redirected to HTTPS.
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./certs:/certs:ro
+    depends_on:
+      - keycloak
+      - api
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.1
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Public address of Keycloak: it ends up in the issuer of every token.
+      KC_HOSTNAME: https://auth.m3.localhost
+      # Behind the proxy Keycloak speaks HTTP and trusts the X-Forwarded-* headers.
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    volumes:
+      - ./realm:/opt/keycloak/data/import:ro
+
+  api:
+    build:
+      context: ../server
+    # --proxy-headers: trust X-Forwarded-Proto and the like, so the API knows it is served over HTTPS.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    environment:
+      # The issuer is the public HTTPS address: it must match the iss claim of the tokens.
+      KEYCLOAK_ISSUER: https://auth.m3.localhost/realms/m3-jwt
+      # The token URL is what Swagger UI calls from the browser.
+      KEYCLOAK_TOKEN_URL: https://auth.m3.localhost/realms/m3-jwt/protocol/openid-connect/token
+      # The server fetches the keys over the private network, not through the proxy.
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/m3-jwt/protocol/openid-connect/certs
+    depends_on:
+      - keycloak

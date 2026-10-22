@@ -1,0 +1,78 @@
+{
+  "realm": "m3-jwt",
+  "enabled": true,
+  "displayName": "M3 JWT demo",
+  "clients": [
+    {
+      "clientId": "m3-fastapi-client",
+      "name": "M3 FastAPI Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "m3-fastapi-secret",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [
+        "https://api.m3.localhost"
+      ],
+      "attributes": {
+        "client_credentials.use_refresh_token": "false"
+      }
+    },
+    {
+      "clientId": "m3-readonly-client",
+      "name": "M3 Read-only Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "m3-readonly-secret",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [
+        "https://api.m3.localhost"
+      ],
+      "attributes": {
+        "client_credentials.use_refresh_token": "false"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "orders:read",
+        "description": "Read orders: GET endpoints of the Orders API"
+      },
+      {
+        "name": "orders:write",
+        "description": "Create orders: POST /orders of the Orders API"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "service-account-m3-fastapi-client",
+      "enabled": true,
+      "serviceAccountClientId": "m3-fastapi-client",
+      "realmRoles": [
+        "orders:read",
+        "orders:write"
+      ]
+    },
+    {
+      "username": "service-account-m3-readonly-client",
+      "enabled": true,
+      "serviceAccountClientId": "m3-readonly-client",
+      "realmRoles": [
+        "orders:read"
+      ]
+    }
+  ]
+}

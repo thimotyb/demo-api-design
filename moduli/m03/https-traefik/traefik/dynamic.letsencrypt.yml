@@ -1,0 +1,31 @@
+# Dynamic configuration for docker-compose.letsencrypt.yml. The Go template functions {{ env "..." }}
+# are expanded by Traefik's file provider with the variables of the traefik container.
+# No certificate files here: the resolver "letsencrypt" requests one for each Host rule.
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+
+http:
+  routers:
+    api:
+      rule: Host(`{{ env "API_HOST" }}`)
+      entryPoints: [websecure]
+      service: api
+      tls:
+        certResolver: letsencrypt
+    keycloak:
+      rule: Host(`{{ env "AUTH_HOST" }}`)
+      entryPoints: [websecure]
+      service: keycloak
+      tls:
+        certResolver: letsencrypt
+  services:
+    api:
+      loadBalancer:
+        servers:
+          - url: http://api:8001
+    keycloak:
+      loadBalancer:
+        servers:
+          - url: http://keycloak:8080

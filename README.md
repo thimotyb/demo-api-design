@@ -25,6 +25,7 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 | 02 FastAPI Core Concepts | [`examples/fastapi-first-steps/`](examples/fastapi-first-steps/README.md) | Minimal FastAPI app |
 | 03 Authentication and Authorization | [`moduli/m03/`](moduli/m03/README.md) | Keycloak client credentials, JWT validation, Postman and generated Python client. Read [`SECURITY_AUDIT.md`](moduli/m03/SECURITY_AUDIT.md) first: audience verification is disabled in the source |
 | 03 Authentication and Authorization | [`moduli/m03/fastapi-password-flow/`](moduli/m03/fastapi-password-flow/README.md) | OAuth2 password flow in four steps (FastAPI tutorial), the last with Argon2 hashes and JWT, no external identity provider; 27 tests. Steps 1 to 3 use the username as token: teaching only |
+| 03 Authentication and Authorization | [`moduli/m03/https-traefik/`](moduli/m03/https-traefik/README.md) | The Orders API and Keycloak behind Traefik with TLS: local CA and certificate, HTTP to HTTPS redirect, smoke test; plus an untested Let's Encrypt variant. Autonomous, the HTTP laboratory is unchanged |
 | 04 Error Handling and Robustness | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md) | Bounded retry for transient gateway failures, with tests |
 | 05 Performance and Optimization | — | No example yet |
 | 06 Documentation and Developer Experience | [`moduli/m05/`](moduli/m05/README.md) | OpenAPI profile with named examples, Spectral rulesets |

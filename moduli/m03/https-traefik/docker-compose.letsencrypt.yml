@@ -1,0 +1,42 @@
+# Variant for a real server: the same stack, with certificates issued and renewed by Let's Encrypt.
+#
+#   cp .env.example .env     # then edit the three values
+#   docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml up -d
+#
+# NOT TESTED in this repository: Let's Encrypt must reach your server from the Internet, so it needs
+# a public domain whose DNS records point to it and ports 80 and 443 open. Start with the staging
+# server (see the commented line) to avoid the rate limits of the real one.
+services:
+  traefik:
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      # The HTTP-01 challenge: Let's Encrypt asks for a token on port 80 of each hostname.
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      # Staging server: certificates are not trusted by browsers, but there are no rate limits.
+      # - --certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+    environment:
+      API_HOST: ${API_HOST}
+      AUTH_HOST: ${AUTH_HOST}
+    volumes:
+      - ./traefik/dynamic.letsencrypt.yml:/etc/traefik/dynamic.yml:ro
+      # The issued certificates and the account key: keep this volume, or the certificates are
+      # requested again at every restart.
+      - letsencrypt:/letsencrypt
+
+  keycloak:
+    environment:
+      KC_HOSTNAME: https://${AUTH_HOST}
+
+  api:
+    environment:
+      KEYCLOAK_ISSUER: https://${AUTH_HOST}/realms/m3-jwt
+      KEYCLOAK_TOKEN_URL: https://${AUTH_HOST}/realms/m3-jwt/protocol/openid-connect/token
+
+volumes:
+  letsencrypt:

@@ -17,6 +17,7 @@ This example shows a complete OAuth2 `client_credentials` flow with:
 
 ## Related example
 
+- [`https-traefik/`](https-traefik/README.md): the same Keycloak realm and Orders API behind Traefik with TLS (a local certificate authority, plus a Let's Encrypt variant for a real server). Autonomous: the HTTP laboratory below is unchanged.
 - [`fastapi-password-flow/`](fastapi-password-flow/README.md): the FastAPI OAuth2 password-flow tutorial in four steps (the last with password hashing and JWT), without an external identity provider.
 
 ## Folder layout
