@@ -54,13 +54,27 @@ class CachedField(FieldExtension):
         self.ttl = ttl
         self.key = key
 
+    def _key(self, source, info, kwargs) -> tuple:
+        return (info._raw_info.parent_type.name, info.field_name, self.key(source, kwargs))
+
     def resolve(self, next_, source, info, **kwargs):
+        key = self._key(source, info, kwargs)
         cache: FieldCache = info.context["cache"]
-        key = (info._raw_info.parent_type.name, info.field_name, self.key(source, kwargs))
         hit = cache.get(key)
         if hit is not _MISSING:
             return hit
         value = next_(source, info, **kwargs)
+        cache.set(key, value, self.ttl)
+        return value
+
+    # The resolver of a field that calls the REST API is async: cache the awaited value.
+    async def resolve_async(self, next_, source, info, **kwargs):
+        key = self._key(source, info, kwargs)
+        cache: FieldCache = info.context["cache"]
+        hit = cache.get(key)
+        if hit is not _MISSING:
+            return hit
+        value = await next_(source, info, **kwargs)
         cache.set(key, value, self.ttl)
         return value
 

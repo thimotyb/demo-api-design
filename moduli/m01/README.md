@@ -1,6 +1,6 @@
 # M01 — API styles side by side: REST, GraphQL and gRPC
 
-Runnable examples for module M01 (API Design Fundamentals). The same checkout domain (orders, shipments, payments) is exposed three ways, so the styles can be compared on the same operations. All data is synthetic and held in memory; the payment gateway is simulated (the payment token selects the outcome).
+Runnable examples for module M01 (API Design Fundamentals). The same checkout domain (orders, shipments, payments) is exposed three ways, so the styles can be compared on the same operations. REST and gRPC sit on the shared domain; the GraphQL server holds no data and calls the REST API over HTTP, as a backend-for-frontend does. All data is synthetic and held in memory; the payment gateway is simulated (the payment token selects the outcome).
 
 Python 3.10+ is required. Everything runs offline after `pip install`.
 
@@ -14,7 +14,7 @@ Python 3.10+ is required. Everything runs offline after `pip install`.
 | --- | --- | --- |
 | [`shared/`](shared/domain.py) | — | Domain, simulated gateway, stable error codes, idempotent payment authorization |
 | [`rest_api/`](rest_api/app.py) | REST, FastAPI | Resources and methods, status codes, `Idempotency-Key` header, `/v1` vs `/v2` |
-| [`graphql_api/`](graphql_api/app.py) | GraphQL, Strawberry on FastAPI | Client-chosen fields, one endpoint, errors in the body, `@deprecated`; [field-level cache and cost-based rate limiting](graphql_api/policies.py) |
+| [`graphql_api/`](graphql_api/app.py) | GraphQL, Strawberry on FastAPI, backed by the REST API | Resolvers that call REST (`REST_API_URL`), client-chosen fields, one endpoint, errors in the body, `@deprecated`; [field-level cache and cost-based rate limiting](graphql_api/policies.py) |
 | [`grpc_api/`](grpc_api/proto/checkout/v1/checkout.proto) | gRPC, grpc.aio | Typed contract, status codes, metadata, deadlines, server streaming |
 | [`compare/`](compare/measure.py) | REST vs GraphQL | Requests and bytes for the same screens |
 
@@ -36,7 +36,7 @@ Start each API by hand:
 ```bash
 . .venv/bin/activate
 uvicorn rest_api.app:app --port 8000        # http://127.0.0.1:8000/docs
-uvicorn graphql_api.app:app --port 8001     # http://127.0.0.1:8001/graphql (GraphiQL)
+uvicorn graphql_api.app:app --port 8001     # http://127.0.0.1:8001/graphql (GraphiQL); calls the REST API on port 8000
 python -m grpc_api.server                   # 127.0.0.1:50051; TrackShipment sends one live update per second
 ```
 
@@ -63,7 +63,7 @@ From `python -m compare.measure`, in-process, synthetic data:
 | B. detail screen (all fields) | REST | 2 | 0 | 789 | 789 |
 | B. detail screen (all fields) | GraphQL | 1 | 246 | 777 | 1023 |
 
-GraphQL removes the extra round trip in both screens and saves most bytes when the client needs few fields. When the client needs everything, the query text makes the total larger than REST's. The first rows are not a general result: they depend on this payload.
+The GraphQL request count is the client's: behind it the server makes the same REST calls (the order, plus the shipment when selected), so the round trip is saved on the slow client link and not in the backend. GraphQL removes the extra round trip in both screens and saves most bytes when the client needs few fields. When the client needs everything, the query text makes the total larger than REST's. The first rows are not a general result: they depend on this payload.
 
 ## How each style reports the same failure
 
@@ -79,7 +79,7 @@ Because GraphQL answers `200` even on failure, monitoring and retries must look 
 
 ## Caching and rate limiting when there is one endpoint
 
-A GraphQL server receives every operation on one URL with one method, so the usual infrastructure policies cannot tell operations apart. The server is also an aggregation layer: its resolvers call the backing services, much like a gateway or backend-for-frontend. Policies therefore move inside the GraphQL layer ([`graphql_api/policies.py`](graphql_api/policies.py)).
+A GraphQL server receives every operation on one URL with one method, so the usual infrastructure policies cannot tell operations apart. The server is also an aggregation layer: its resolvers call the backing service (here the REST API: `GET /v2/orders/{id}`, `GET /v1/orders/{id}/shipment`, `GET /v1/customers/{id}`, `POST /v1/payments`), much like a gateway or backend-for-frontend. Policies therefore move inside the GraphQL layer ([`graphql_api/policies.py`](graphql_api/policies.py)).
 
 | Concern | REST | GraphQL (this example) |
 | --- | --- | --- |
@@ -91,6 +91,7 @@ What the tests show (`graphql_api/test_graphql_policies.py`):
 
 - Repeated or differently shaped queries for the same shipment make one carrier lookup; the entry expires after its TTL.
 - A field without the policy (`customer`) is resolved every time.
+- Resolvers call the REST API only for the fields a query selects, and the `idempotencyKey` input is forwarded as the `Idempotency-Key` header (`graphql_api/test_graphql.py`). A REST error body becomes a GraphQL error with the same code.
 - Twenty cheap requests pass for one client, while the third `status line` query (7 points each) is refused: counting HTTP requests would treat both groups alike.
 - A refused query is not executed, the budget refills over time, and clients have separate budgets.
 

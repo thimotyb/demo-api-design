@@ -38,6 +38,10 @@ class ShipmentNotFound(DomainError):
     code = "SHIPMENT_NOT_FOUND"
 
 
+class CustomerNotFound(DomainError):
+    code = "CUSTOMER_NOT_FOUND"
+
+
 class PaymentDeclined(DomainError):
     code = "PAYMENT_DECLINED"
 
@@ -221,7 +225,10 @@ class Store:
             raise OrderNotFound(f"Order {order_id} does not exist.") from None
 
     def get_customer(self, customer_id: str) -> Customer:
-        return self.customers[customer_id]
+        try:
+            return self.customers[customer_id]
+        except KeyError:
+            raise CustomerNotFound(f"Customer {customer_id} does not exist.") from None
 
     def get_shipment(self, tracking_code: str) -> Shipment:
         self.carrier_lookups += 1

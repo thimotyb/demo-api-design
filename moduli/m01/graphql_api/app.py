@@ -1,30 +1,58 @@
-"""GraphQL API over the shared checkout domain (Strawberry on FastAPI).
+"""GraphQL API over the REST checkout API (Strawberry on FastAPI).
 
-One endpoint, POST /graphql. The client chooses the fields. Failures are
-returned with HTTP 200 and an `errors` array whose `extensions.code` carries the
-same stable domain codes used by the other styles.
+One endpoint, POST /graphql. The client chooses the fields. The server holds no
+data: it is a backend-for-frontend whose resolvers call the REST API over HTTP
+(`/v2/orders/{id}`, `/v1/orders/{id}/shipment`, `/v1/customers/{id}`,
+`/v1/payments`), so it neither reads the store nor repeats the domain rules.
+Failures are returned with HTTP 200 and an `errors` array whose
+`extensions.code` carries the stable code found in the REST error body.
 """
 
 from __future__ import annotations
 
+import os
+import time
+from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import datetime
 from decimal import Decimal
 
+import httpx
 import strawberry
-import time
-from collections.abc import Callable
-
 from fastapi import FastAPI, Request, Response
 from graphql import GraphQLError
 from strawberry.fastapi import GraphQLRouter
 
-from shared import domain
 from graphql_api.policies import CachedField, FieldCache, QueryCostLimiter, RateLimitExtension
-from shared.domain import DomainError, Store
+
+REST_API_URL = os.environ.get("REST_API_URL", "http://127.0.0.1:8000")
 
 
-def api_error(error: DomainError) -> GraphQLError:
-    return GraphQLError(error.message, extensions={"code": error.code})
+def rest_client(app=None, base_url: str = REST_API_URL) -> httpx.AsyncClient:
+    """HTTP client for the REST API; with `app`, the calls go to that ASGI app in-process (tests)."""
+    if app is not None:
+        return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://rest")
+    return httpx.AsyncClient(base_url=base_url, timeout=5)
+
+
+async def call_rest(info: strawberry.Info, method: str, path: str, **kwargs) -> httpx.Response:
+    """Call the REST API and turn an error response into a GraphQL error with the same code."""
+    try:
+        response = await info.context["rest"].request(method, path, **kwargs)
+    except httpx.TransportError as error:
+        raise GraphQLError("The REST API is unreachable.", extensions={"code": "UPSTREAM_UNAVAILABLE"}) from error
+    if response.is_success:
+        return response
+    try:
+        body = response.json()
+    except ValueError:
+        body = {}
+    raise GraphQLError(body.get("message", "Unexpected response from the REST API."),
+                       extensions={"code": body.get("code", "UPSTREAM_ERROR")})
+
+
+def _time(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 @strawberry.type
@@ -73,13 +101,14 @@ class Payment:
     replayed: bool
 
 
-def _money(m: domain.Money) -> Money:
-    return Money(amount=m.amount, currency=m.currency)
+def _money(m: dict) -> Money:
+    return Money(amount=Decimal(m["amount"]), currency=m["currency"])
 
 
-def _shipment(s: domain.Shipment) -> Shipment:
-    events = [ShipmentEvent(status=e.status, location=e.location, occurred_at=e.occurred_at) for e in s.events]
-    return Shipment(tracking_code=s.tracking_code, carrier=s.carrier, status=s.status,
+def _shipment(s: dict) -> Shipment:
+    events = [ShipmentEvent(status=e["status"], location=e["location"], occurred_at=_time(e["occurred_at"]))
+              for e in s["events"]]
+    return Shipment(tracking_code=s["tracking_code"], carrier=s["carrier"], status=s["status"],
                     events=events, last_event=events[-1] if events else None)
 
 
@@ -90,41 +119,42 @@ class Order:
     created_at: datetime
     lines: list[OrderLine]
     payment_id: str
-    _domain: strawberry.Private[domain.Order]
-    _store: strawberry.Private[Store]
+    _data: strawberry.Private[dict]
 
     # The first version exposed the total as two flat fields. The nested `total`
     # was added next to them and the old fields were deprecated: no new version
     # and no broken client.
     @strawberry.field(deprecation_reason="Use total.amount")
     def total_amount(self) -> Decimal:
-        return self._domain.total.amount
+        return Decimal(self._data["total"]["amount"])
 
     @strawberry.field(deprecation_reason="Use total.currency")
     def currency(self) -> str:
-        return self._domain.total.currency
+        return self._data["total"]["currency"]
 
     @strawberry.field
     def total(self) -> Money:
-        return _money(self._domain.total)
+        return _money(self._data["total"])
 
+    # One more REST call, made only when the query selects `customer`.
     @strawberry.field
-    def customer(self) -> Customer:
-        c = self._store.get_customer(self._domain.customer_id)
-        return Customer(id=c.id, email=c.email, addresses=list(c.addresses))
+    async def customer(self, info: strawberry.Info) -> Customer:
+        c = (await call_rest(info, "GET", f"/v1/customers/{self._data['customer_id']}")).json()
+        return Customer(id=c["id"], email=c["email"], addresses=c["addresses"])
 
     # The carrier lookup is the expensive part of this API. Its result is public
     # carrier data, so it is cached by tracking code for 30 seconds, whoever asks.
-    @strawberry.field(extensions=[CachedField(ttl=30, key=lambda source, kwargs: source._domain.tracking_code)])
-    def shipment(self) -> Shipment:
-        return _shipment(self._store.get_shipment(self._domain.tracking_code))
+    @strawberry.field(extensions=[CachedField(ttl=30, key=lambda source, kwargs: source._data["tracking_code"])])
+    async def shipment(self, info: strawberry.Info) -> Shipment:
+        response = await call_rest(info, "GET", f"/v1/orders/{self._data['id']}/shipment")
+        return _shipment(response.json())
 
 
-def _order(o: domain.Order, store: Store) -> Order:
-    lines = [OrderLine(sku=l.sku, description=l.description, quantity=l.quantity, unit_price=_money(l.unit_price))
-             for l in o.lines]
-    return Order(id=o.id, status=o.status, created_at=o.created_at, lines=lines, payment_id=o.payment_id,
-                 _domain=o, _store=store)
+def _order(o: dict) -> Order:
+    lines = [OrderLine(sku=l["sku"], description=l["description"], quantity=l["quantity"],
+                       unit_price=_money(l["unit_price"])) for l in o["lines"]]
+    return Order(id=o["id"], status=o["status"], created_at=_time(o["created_at"]), lines=lines,
+                 payment_id=o["payment_id"], _data=o)
 
 
 @strawberry.input
@@ -144,44 +174,45 @@ class AuthorizePaymentInput:
 @strawberry.type
 class Query:
     @strawberry.field
-    def order(self, info: strawberry.Info, id: str) -> Order:
-        store: Store = info.context["store"]
-        try:
-            return _order(store.get_order(id), store)
-        except DomainError as error:
-            raise api_error(error) from error
+    async def order(self, info: strawberry.Info, id: str) -> Order:
+        return _order((await call_rest(info, "GET", f"/v2/orders/{id}")).json())
 
 
 @strawberry.type
 class Mutation:
     @strawberry.mutation
-    def authorize_payment(self, info: strawberry.Info, input: AuthorizePaymentInput) -> Payment:
-        store: Store = info.context["store"]
-        try:
-            result = store.authorize_payment(input.customer_id, domain.Money(input.amount.amount, input.amount.currency),
-                                             input.payment_token, input.idempotency_key)
-        except DomainError as error:
-            raise api_error(error) from error
-        p = result.payment
-        return Payment(id=p.id, amount=_money(p.amount), status=p.status,
-                       authorization_code=p.authorization_code, replayed=result.replayed)
+    async def authorize_payment(self, info: strawberry.Info, input: AuthorizePaymentInput) -> Payment:
+        body = {"customer_id": input.customer_id,
+                "amount": {"amount": str(input.amount.amount), "currency": input.amount.currency},
+                "payment_token": input.payment_token}
+        # The GraphQL input field becomes the REST header: the REST API owns idempotency.
+        headers = {"Idempotency-Key": input.idempotency_key} if input.idempotency_key else {}
+        response = await call_rest(info, "POST", "/v1/payments", json=body, headers=headers)
+        p = response.json()
+        return Payment(id=p["id"], amount=_money(p["amount"]), status=p["status"],
+                       authorization_code=p["authorization_code"],
+                       replayed=response.headers.get("Idempotent-Replayed") == "true")
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation, extensions=[RateLimitExtension])
 
 
-def create_app(store: Store | None = None, clock: Callable[[], float] = time.monotonic,
+def create_app(rest: httpx.AsyncClient | None = None, clock: Callable[[], float] = time.monotonic,
                capacity: float = 20, refill_per_second: float = 10) -> FastAPI:
-    store = store or Store()
+    rest = rest or rest_client()
     cache = FieldCache(clock=clock)
     limiter = QueryCostLimiter(capacity=capacity, refill_per_second=refill_per_second, clock=clock)
 
     async def context(request: Request, response: Response) -> dict:
         client = request.headers.get("x-client-id") or (request.client.host if request.client else "anonymous")
-        return {"store": store, "cache": cache, "limiter": limiter, "client": client, "response": response}
+        return {"rest": rest, "cache": cache, "limiter": limiter, "client": client, "response": response}
 
-    app = FastAPI(title="Checkout GraphQL API")
-    app.state.store = store
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        yield
+        await rest.aclose()
+
+    app = FastAPI(title="Checkout GraphQL API", lifespan=lifespan)
     app.include_router(GraphQLRouter(schema, context_getter=context), prefix="/graphql")
     return app
 

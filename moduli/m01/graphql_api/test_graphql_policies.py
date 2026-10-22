@@ -4,8 +4,9 @@ import pytest
 from fastapi.testclient import TestClient
 from graphql import OperationDefinitionNode, parse
 
-from graphql_api.app import create_app, schema
+from graphql_api.app import create_app, rest_client, schema
 from graphql_api.policies import query_cost
+from rest_api.app import create_app as create_rest
 from shared.domain import Store
 
 CHEAP = '{ order(id: "o-1001") { id status } }'
@@ -36,7 +37,7 @@ def store():
 
 @pytest.fixture
 def client(store, clock):
-    return TestClient(create_app(store, clock=clock, capacity=20, refill_per_second=10))
+    return TestClient(create_app(rest_client(create_rest(store)), clock=clock, capacity=20, refill_per_second=10))
 
 
 def post(client, query, client_id=None):

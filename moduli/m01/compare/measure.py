@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from fastapi.testclient import TestClient
 
-from graphql_api.app import create_app as create_graphql
+from graphql_api.app import create_app as create_graphql, rest_client
 from rest_api.app import create_app as create_rest
 from shared.domain import Store
 
@@ -71,7 +71,9 @@ def graphql_detail(client: TestClient) -> Result:
 
 
 def measure() -> dict[str, dict[str, Result]]:
-    rest, gql = TestClient(create_rest(Store())), TestClient(create_graphql(Store()))
+    # The GraphQL server reads the same REST API that the REST client calls directly.
+    rest_app = create_rest(Store())
+    rest, gql = TestClient(rest_app), TestClient(create_graphql(rest_client(rest_app)))
     return {
         "A. status line (2 fields)": {"REST": rest_status(rest), "GraphQL": graphql_status(gql)},
         "B. detail screen (all fields)": {"REST": rest_detail(rest), "GraphQL": graphql_detail(gql)},

@@ -22,6 +22,7 @@ STATUS = {
     "INVALID_REQUEST": 400,
     "ORDER_NOT_FOUND": 404,
     "SHIPMENT_NOT_FOUND": 404,
+    "CUSTOMER_NOT_FOUND": 404,
     "PAYMENT_DECLINED": 402,
     "TRANSIENT_GATEWAY_FAILURE": 402,
     "IDEMPOTENCY_CONFLICT": 409,
@@ -76,6 +77,12 @@ class ShipmentOut(BaseModel):
     carrier: str
     status: str
     events: list[EventOut]
+
+
+class CustomerOut(BaseModel):
+    id: str
+    email: str
+    addresses: list[str]
 
 
 class PaymentRequest(BaseModel):
@@ -134,6 +141,13 @@ def create_app(store: Store | None = None) -> FastAPI:
                            events=[EventOut(status=e.status, location=e.location, occurred_at=e.occurred_at)
                                    for e in shipment.events])
 
+    customers = APIRouter(tags=["Customers"])
+
+    @customers.get("/customers/{customer_id}", response_model=CustomerOut, responses={404: {"model": ErrorOut}})
+    def get_customer(customer_id: str, s: Store = Depends(get_store)):
+        c = s.get_customer(customer_id)
+        return CustomerOut(id=c.id, email=c.email, addresses=list(c.addresses))
+
     v1 = APIRouter(prefix="/v1", tags=["v1"])
     v2 = APIRouter(prefix="/v2", tags=["v2"])
     for router in (v1, v2):
@@ -168,6 +182,7 @@ def create_app(store: Store | None = None) -> FastAPI:
                           amount=MoneyModel(amount=p.amount.amount, currency=p.amount.currency),
                           status=p.status, authorization_code=p.authorization_code)
 
+    v1.include_router(customers)
     app.include_router(v1)
     app.include_router(v2)
     return app

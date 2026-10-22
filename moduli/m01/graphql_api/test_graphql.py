@@ -1,7 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from graphql_api.app import create_app, schema
+from graphql_api.app import create_app, rest_client, schema
+from rest_api.app import create_app as create_rest
 from shared.domain import Store
 
 AUTHORIZE = """
@@ -25,7 +26,7 @@ def store():
 
 @pytest.fixture
 def client(store):
-    return TestClient(create_app(store))
+    return TestClient(create_app(rest_client(create_rest(store))))
 
 
 def gql(client, query, variables=None):
@@ -95,3 +96,43 @@ def test_evolution_new_field_added_old_fields_deprecated(client):
     # An old client that still asks for the deprecated fields keeps working.
     body = gql(client, "{ order(id: \"o-1001\") { totalAmount currency } }")
     assert body["data"]["order"] == {"totalAmount": "64.50", "currency": "EUR"}
+
+
+# The GraphQL server holds no data: every field it returns is read from the REST API, and only the fields the
+# query selects trigger a REST call.
+def test_resolvers_call_the_rest_api_only_for_the_selected_fields(store):
+    calls = []
+
+    async def record(request):
+        calls.append(f"{request.method} {request.url.path}")
+
+    rest = rest_client(create_rest(store))
+    rest.event_hooks["request"].append(record)
+    client = TestClient(create_app(rest))
+
+    gql(client, '{ order(id: "o-1001") { id status } }')
+    assert calls == ["GET /v2/orders/o-1001"]
+
+    calls.clear()
+    gql(client, '{ order(id: "o-1001") { shipment { status } customer { email } } }')
+    assert calls == ["GET /v2/orders/o-1001", "GET /v1/orders/o-1001/shipment", "GET /v1/customers/c-001"]
+
+
+# The idempotency key of the GraphQL input travels to the REST API as the Idempotency-Key header.
+def test_the_idempotency_key_is_forwarded_as_a_header(store):
+    seen = []
+
+    async def record(request):
+        seen.append(request.headers.get("idempotency-key"))
+
+    rest = rest_client(create_rest(store))
+    rest.event_hooks["request"].append(record)
+    gql(TestClient(create_app(rest)), AUTHORIZE, payment_input(key="k-9"))
+    assert seen == ["k-9"]
+
+
+# A REST error body becomes a GraphQL error with the same code.
+def test_an_unknown_customer_is_a_coded_error_from_the_rest_api(client, store):
+    store.orders["o-1001"].customer_id = "c-404"
+    body = gql(client, '{ order(id: "o-1001") { customer { email } } }')
+    assert body["errors"][0]["extensions"]["code"] == "CUSTOMER_NOT_FOUND"
