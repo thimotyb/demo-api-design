@@ -102,7 +102,7 @@ Realm:
 
 In the Keycloak console, switch to the realm `M3 JWT demo`. The roles are under **Realm roles**. The roles of a client are under **Clients → the client → Service account roles**. The roles appear in the access token in the claim `realm_access.roles`.
 
-The realm is imported only when it does not exist yet. If you started Keycloak before this change, delete the realm `m3-jwt` in the console, or delete `.keycloak/keycloak-<version>/data/h2`, and start Keycloak again.
+The realm is imported only when it does not exist yet. A realm imported from an older version of the realm file has no web origins on its clients, and then Authorize in `/docs` fails with `Failed to fetch` and a CORS error in the browser console (`No 'Access-Control-Allow-Origin' header`): add `http://localhost:8001` and `http://127.0.0.1:8001` to **Web origins** in the settings of each client, or reset the realm as described here. If you started Keycloak before this change, delete the realm `m3-jwt` in the console, or delete `.keycloak/keycloak-<version>/data/h2`, and start Keycloak again.
 
 The role tests do not need Keycloak:
 
