@@ -1,0 +1,41 @@
+@startuml
+' Sequence of GET /products/{id} in app/main.py: ETag, Cache-Control and 304.
+' Render with:  plantuml -tsvg etag-sequence.puml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam backgroundColor #FFFFFF
+skinparam noteBackgroundColor #FFF8E1
+skinparam noteBorderColor #C9A227
+skinparam sequenceGroupBackgroundColor #EDF2F7
+title GET /products/1 with ETag and Cache-Control
+
+participant "Client\n(browser or proxy cache)" as C
+participant "API\nGET /products/{id}" as S
+
+== 1. First request: nothing is cached ==
+C -> S : GET /products/1
+S -> S : etag = hash of the JSON body\n(here "e1")
+S --> C : 200 OK\nETag: "e1"\nCache-Control: public, max-age=60\n{ "name": "API Design handbook", "price": "34.50", ... }
+note over C : stores the copy and its ETag.\nThe copy is fresh for 60 s.
+
+== 2. Within 60 seconds: the copy is fresh ==
+C -> C : reuses the stored copy
+note over C, S : No request is sent: the server does not see it.
+
+== 3. After 60 seconds: the copy is stale, the product has not changed ==
+C -> S : GET /products/1\nIf-None-Match: "e1"
+S -> S : etag = "e1" again (same body)\nit matches If-None-Match
+S --> C : 304 Not Modified\nETag: "e1"\nCache-Control: public, max-age=60\n(no body)
+note over C : keeps its copy, now fresh for another 60 s.
+
+== 4. Someone changes the product ==
+C -> S : PUT /products/1/price\n{ "price": "39.00" }
+S --> C : 200 OK
+note over S : the next body gives\nanother ETag, "e2"
+
+== 5. Next revalidation: the old copy is out of date ==
+C -> S : GET /products/1\nIf-None-Match: "e1"
+S -> S : etag = "e2"\nit does not match "e1"
+S --> C : 200 OK\nETag: "e2"\nCache-Control: public, max-age=60\n{ ..., "price": "39.00", ... }
+note over C : replaces its copy with the new one.
+@enduml
