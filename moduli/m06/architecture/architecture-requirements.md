@@ -1,6 +1,6 @@
 # Requisiti architetturali — checkout e pagamento
 
-Questa fonte raccoglie requisiti e assunzioni per le viste di M04. È limitata alla fetta checkout, autorizzazione del pagamento e avvio spedizione del [caso guida](../../../caso-guida/README.md). I diagrammi sono proposte logiche da revisionare: non descrivono un sistema già implementato.
+Questa fonte raccoglie requisiti e assunzioni per le viste di M06. È limitata alla fetta checkout, autorizzazione del pagamento e avvio spedizione del [caso guida](../../../caso-guida/README.md). I diagrammi sono proposte logiche da revisionare: non descrivono un sistema già implementato.
 
 ## Obiettivo e confini
 

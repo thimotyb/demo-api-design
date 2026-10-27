@@ -32,7 +32,7 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 | 06 Documentation and Developer Experience | [`moduli/m06/zudoku-portal/`](moduli/m06/zudoku-portal/README.md) | Zudoku developer portal: MDX guides plus the API reference built from the M05 contract (Node.js 22.22+) |
 | 07 API Testing | [`moduli/m05/`](moduli/m05/README.md) | Prism mock, generated Postman collection, Newman playbooks |
 | 07 API Testing | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md) | `unittest` suite that fails on the starter and passes on the reference solution |
-| Case design material | [`moduli/m04/architecture/`](moduli/m04/architecture/README.md) | Architecture and ArchiMate views with a traceability matrix |
+| Case design material | [`moduli/m06/architecture/`](moduli/m06/architecture/README.md) | Architecture and ArchiMate views with a traceability matrix |
 
 ## Quick start
 
