@@ -25,6 +25,7 @@ STATUS = {
     "CUSTOMER_NOT_FOUND": 404,
     "PAYMENT_DECLINED": 402,
     "TRANSIENT_GATEWAY_FAILURE": 402,
+    "RETRIES_EXHAUSTED": 402,
     "IDEMPOTENCY_CONFLICT": 409,
 }
 
@@ -102,6 +103,7 @@ class PaymentOut(BaseModel):
 class ErrorOut(BaseModel):
     code: str
     message: str
+    details: dict = {}
 
 
 def _lines(order: domain.Order) -> list[LineOut]:
@@ -120,14 +122,16 @@ def create_app(store: Store | None = None) -> FastAPI:
 
     @app.exception_handler(DomainError)
     async def domain_error(request: Request, exc: DomainError):
-        return JSONResponse({"code": exc.code, "message": exc.message}, status_code=STATUS.get(exc.code, 500))
+        return JSONResponse({"code": exc.code, "message": exc.message, "details": exc.details},
+                            status_code=STATUS.get(exc.code, 500))
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
         # Same error shape as every other failure, and the 400 of the case contract.
         first = exc.errors()[0]
         where = ".".join(str(p) for p in first["loc"])
-        return JSONResponse({"code": "INVALID_REQUEST", "message": f"{where}: {first['msg']}"}, status_code=400)
+        return JSONResponse({"code": "INVALID_REQUEST", "message": f"{where}: {first['msg']}",
+                             "details": {"field": where}}, status_code=400)
 
     shipments = APIRouter(tags=["Shipments"])
 

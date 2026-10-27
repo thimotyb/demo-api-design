@@ -110,3 +110,23 @@ def test_shipment_response_is_cacheable_by_http_alone(client):
     # Shared caches such as a CDN or a proxy must not, because the content can be
     # specific to the user. "max-age=30": the stored copy is fresh for 30 seconds.
     assert response.headers["Cache-Control"] == "private, max-age=30"
+
+
+# The error body always has code, message and details; a validation failure names the offending field.
+def test_error_body_has_code_message_and_details(client):
+    response = client.post("/v1/payments", json={**PAYMENT, "amount": {"amount": "-1", "currency": "EUR"}})
+    body = response.json()
+    assert response.status_code == 400 and body["code"] == "INVALID_REQUEST"
+    assert body["details"]["field"].endswith("amount.amount")
+
+
+# Retries on one key are bounded: two transient failures say how many attempts were used, the third is final and replayed.
+def test_third_transient_failure_becomes_retries_exhausted(client, store):
+    outage = {**PAYMENT, "payment_token": "tok_transient"}
+    headers = {"Idempotency-Key": "k-5"}
+    answers = [client.post("/v1/payments", json=outage, headers=headers) for _ in range(4)]
+    assert [a.status_code for a in answers] == [402, 402, 402, 402]
+    assert [a.json()["code"] for a in answers] == ["TRANSIENT_GATEWAY_FAILURE"] * 2 + ["RETRIES_EXHAUSTED"] * 2
+    assert answers[0].json()["details"] == {"attempt": 1, "max_attempts": 3}
+    assert answers[2].json()["details"] == {"attempts": 3}
+    assert store.gateway.calls == 3

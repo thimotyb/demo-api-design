@@ -19,14 +19,14 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 
 | Course module | Example | Notes |
 | --- | --- | --- |
-| 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL as a backend-for-frontend over the REST API, with field-level cache and cost-based rate limiting; 46 tests |
+| 01 API Design Fundamentals | [`moduli/m01/`](moduli/m01/README.md) | The checkout domain as REST (FastAPI), GraphQL (Strawberry) and gRPC (`grpc.aio`): requests and bytes compared, idempotent payments, error mapping, contract evolution, gRPC deadlines and server streaming, GraphQL as a backend-for-frontend over the REST API, with field-level cache and cost-based rate limiting; 48 tests |
 | 01 API Design Fundamentals | [`caso-guida/`](caso-guida/README.md) | Requirements, domain model, use cases, sequence diagrams and the source OpenAPI contract |
 | 02 FastAPI Core Concepts | [`moduli/m02/`](moduli/m02/README.md) | The Orders API of the lesson in two small commented versions: synchronous (`orders_api/`) and `async def` (`orders_api_async/`) with a timing demo; 19 tests |
 | 02 FastAPI Core Concepts | [`examples/fastapi-first-steps/`](examples/fastapi-first-steps/README.md) | Minimal FastAPI app |
 | 03 Authentication and Authorization | [`moduli/m03/`](moduli/m03/README.md) | Keycloak client credentials, JWT validation, Postman and generated Python client. Read [`SECURITY_AUDIT.md`](moduli/m03/SECURITY_AUDIT.md) first: audience verification is disabled in the source |
 | 03 Authentication and Authorization | [`moduli/m03/fastapi-password-flow/`](moduli/m03/fastapi-password-flow/README.md) | OAuth2 password flow in four steps (FastAPI tutorial), the last with Argon2 hashes and JWT, no external identity provider; 27 tests. Steps 1 to 3 use the username as token: teaching only |
 | 03 Authentication and Authorization | [`moduli/m03/https-traefik/`](moduli/m03/https-traefik/README.md) | The Orders API and Keycloak behind Traefik with TLS: local CA and certificate, HTTP to HTTPS redirect, smoke test; plus an untested Let's Encrypt variant. Autonomous, the HTTP laboratory is unchanged |
-| 04 Error Handling and Robustness | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md) | Bounded retry for transient gateway failures, with tests |
+| 04 Error Handling and Robustness | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md) | Bounded retry for transient gateway failures, with tests; sections 1.1 and 1.2 point to the shared error shape and exception handlers of [`moduli/m01/`](moduli/m01/README.md) |
 | 05 Performance and Optimization | — | No example yet |
 | 06 Documentation and Developer Experience | [`moduli/m05/`](moduli/m05/README.md) | OpenAPI profile with named examples, Spectral rulesets |
 | 06 Documentation and Developer Experience | [`moduli/m06/zudoku-portal/`](moduli/m06/zudoku-portal/README.md) | Zudoku developer portal: MDX guides plus the API reference built from the M05 contract (Node.js 22.22+) |

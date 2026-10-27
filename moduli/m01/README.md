@@ -71,7 +71,7 @@ The GraphQL request count is the client's: behind it the server makes the same R
 | --- | --- | --- | --- |
 | Unknown resource | `404`, body `{"code": "ORDER_NOT_FOUND", ...}` | HTTP `200`, `errors[0].extensions.code = ORDER_NOT_FOUND`, `data: null` | `NOT_FOUND`, trailing metadata `x-error-code` |
 | Invalid input | `400` `INVALID_REQUEST` | `errors` entry (schema errors are rejected before execution) | `INVALID_ARGUMENT` |
-| Payment declined or gateway failure | `402` with `PAYMENT_DECLINED` / `TRANSIENT_GATEWAY_FAILURE` | `errors` entry with the same codes | — (not part of the internal contract) |
+| Payment declined or gateway failure | `402` with `PAYMENT_DECLINED` / `TRANSIENT_GATEWAY_FAILURE` / `RETRIES_EXHAUSTED` (third transient failure on one idempotency key) | `errors` entry with the same codes | — (not part of the internal contract) |
 | Idempotency key reused with another request | `409` `IDEMPOTENCY_CONFLICT` | `errors` entry with the same code | — |
 | Slow dependency | client timeout | client timeout | `DEADLINE_EXCEEDED` from the call deadline |
 

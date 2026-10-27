@@ -18,12 +18,16 @@ import re
 # Every failure carries a stable, machine-readable code. Each API style maps
 # the code to its own mechanism (HTTP status, gRPC status, GraphQL extensions).
 
+MAX_TRANSIENT_ATTEMPTS = 3  # transient failures on one idempotency key before RETRIES_EXHAUSTED
+
+
 class DomainError(Exception):
     code = "DOMAIN_ERROR"
 
-    def __init__(self, message: str):
+    def __init__(self, message: str, **details):
         super().__init__(message)
         self.message = message
+        self.details = details
 
 
 class InvalidRequest(DomainError):
@@ -48,6 +52,10 @@ class PaymentDeclined(DomainError):
 
 class TransientGatewayFailure(DomainError):
     code = "TRANSIENT_GATEWAY_FAILURE"
+
+
+class RetriesExhausted(DomainError):
+    code = "RETRIES_EXHAUSTED"
 
 
 class IdempotencyConflict(DomainError):
@@ -194,6 +202,8 @@ class Store:
         self.payments: dict[str, Payment] = {}
         # idempotency key -> (request fingerprint, stored outcome)
         self._idempotency: dict[str, tuple[tuple, Payment | DomainError]] = {}
+        # idempotency key -> transient failures seen so far (see MAX_TRANSIENT_ATTEMPTS)
+        self._transient_failures: dict[str, int] = {}
         self._payment_ids = count(1)
         self._seed()
 
@@ -282,8 +292,20 @@ class Store:
         # Step 3 - First time we see this request: call the payment gateway.
         try:
             code = self.gateway.authorize(amount, token)
-        except TransientGatewayFailure:
-            raise  # not stored: the client must be able to retry with the same key
+        except TransientGatewayFailure as error:
+            # Not stored as such: the client must be able to retry with the same key.
+            # But the retries are bounded: after MAX_TRANSIENT_ATTEMPTS failures on the
+            # same key the outcome becomes final, stored and replayed like a refusal.
+            if idempotency_key is None:
+                raise
+            failures = self._transient_failures[idempotency_key] = self._transient_failures.get(idempotency_key, 0) + 1
+            if failures < MAX_TRANSIENT_ATTEMPTS:
+                raise TransientGatewayFailure(error.message, attempt=failures,
+                                              max_attempts=MAX_TRANSIENT_ATTEMPTS) from error
+            exhausted = RetriesExhausted("Authorization not completed after %d transient failures; "
+                                         "offer another payment method." % failures, attempts=failures)
+            self._idempotency[idempotency_key] = (fingerprint, exhausted)
+            raise exhausted from error
         except DomainError as error:
             # A definitive refusal (e.g. card declined) is remembered, so a retry
             # with the same key gets the same answer. Other errors are not stored.
