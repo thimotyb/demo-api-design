@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "M05 - Playbook Postman per le sequenze checkout",
+    "name": "M07 - Playbook Postman per le sequenze checkout",
     "description": "Generata da openapi/checkout-api.yaml e scenarios/postman-playbooks.yaml con scripts/generate_postman.py. Scenario simulati: Prism sceglie gli esempi OAS tramite Prefer; non sono test di un backend stateful.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },

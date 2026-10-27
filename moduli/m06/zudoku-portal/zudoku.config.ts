@@ -8,7 +8,7 @@ const config: ZudokuConfig = {
   ],
   apis: {
     type: "file",
-    input: "../../m05/openapi/checkout-api.yaml",
+    input: "../../m07/openapi/checkout-api.yaml",
     path: "/api",
   },
 };

@@ -1,6 +1,6 @@
-# Spectral — M05
+# Spectral — M06
 
-Questa cartella raccoglie gli export ufficiali di API Stylebook e i comandi per controllare manualmente la specifica [`../openapi/checkout-api.yaml`](../openapi/checkout-api.yaml) con tre ruleset:
+Questa cartella raccoglie gli export ufficiali di API Stylebook e i comandi per controllare manualmente la specifica [`../../m07/openapi/checkout-api.yaml`](../../m07/openapi/checkout-api.yaml) con tre ruleset:
 
 - OWASP Top 10;
 - URL Style Guidelines;
@@ -26,9 +26,9 @@ Gli export originali dei tre style guide sono già salvati in `rulesets/exported
 4. Il file principale si chiama `.spectral.json`; dalla cartella `spectral/` si può eseguire il singolo export così:
 
 ```bash
-npx spectral lint ../openapi/checkout-api.yaml --ruleset rulesets/exported/owasp-top-10/.spectral.json
-npx spectral lint ../openapi/checkout-api.yaml --ruleset rulesets/exported/url-style-guidelines/.spectral.json
-npx spectral lint ../openapi/checkout-api.yaml --ruleset rulesets/exported/documentation/.spectral.json
+npx spectral lint ../../m07/openapi/checkout-api.yaml --ruleset rulesets/exported/owasp-top-10/.spectral.json
+npx spectral lint ../../m07/openapi/checkout-api.yaml --ruleset rulesets/exported/url-style-guidelines/.spectral.json
+npx spectral lint ../../m07/openapi/checkout-api.yaml --ruleset rulesets/exported/documentation/.spectral.json
 ```
 
 Gli export sono stati scaricati il 7 ottobre 2026. Per aggiornare la demo in modo riproducibile, riscaricare i file con la stessa procedura e verificare il diff prima di sostituirli.
@@ -46,7 +46,7 @@ Lo script esegue tutti e tre gli export anche quando un ruleset trova errori; te
 Oppure eseguire i controlli separatamente:
 
 ```bash
-npx spectral lint ../openapi/checkout-api.yaml --ruleset rulesets/exported/owasp-top-10/.spectral.json
-npx spectral lint ../openapi/checkout-api.yaml --ruleset rulesets/exported/url-style-guidelines/.spectral.json
-npx spectral lint ../openapi/checkout-api.yaml --ruleset rulesets/exported/documentation/.spectral.json
+npx spectral lint ../../m07/openapi/checkout-api.yaml --ruleset rulesets/exported/owasp-top-10/.spectral.json
+npx spectral lint ../../m07/openapi/checkout-api.yaml --ruleset rulesets/exported/url-style-guidelines/.spectral.json
+npx spectral lint ../../m07/openapi/checkout-api.yaml --ruleset rulesets/exported/documentation/.spectral.json
 ```

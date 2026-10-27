@@ -1,6 +1,6 @@
-# M05 — Contratto OpenAPI
+# M07 — Contratto OpenAPI e playbook
 
-**Stato: demo API/Postman implementata per mock locale; include anche i comandi Spectral per OWASP Top 10, URL Style Guidelines e Documentation.**
+**Stato: demo API/Postman implementata per mock locale. I controlli Spectral sul contratto sono in [`../m06/spectral/`](../m06/spectral/README.md).**
 
 **Obiettivo:** Ridurre e verificare il contratto della fetta verticale, applicare regole di API Governance, documentare esempi OpenAPI da servire come risposte fisse in uno stub e costruire test funzionali riproducibili dal caso guida in [caso-guida](../../caso-guida/README.md).
 
@@ -36,7 +36,7 @@ Per rigenerare il file Postman dopo aver cambiato la specifica o lo YAML dei pla
 
 ### Verifica API Governance con Spectral
 
-La cartella [`spectral/`](spectral/README.md), accanto a `openapi/` e `postman/`, contiene i ruleset, i comandi e la procedura per esportare i file ufficiali da API Stylebook. I tre controlli coprono OWASP Top 10, URL Style Guidelines e Documentation.
+I ruleset Spectral e i comandi per controllare `openapi/checkout-api.yaml` sono nella cartella [`../m06/spectral/`](../m06/spectral/README.md), perché il linting fa parte del modulo sulla documentazione. Il contratto resta qui perché Prism lo usa come mock per i playbook.
 
 ### Confini della copertura
 

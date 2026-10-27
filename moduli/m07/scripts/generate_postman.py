@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Postman collection from the M05 OpenAPI profile and scenario map."""
+"""Generate the Postman collection from the OpenAPI profile and scenario map."""
 
 from __future__ import annotations
 
@@ -171,7 +171,7 @@ def main() -> None:
 
     collection = {
         "info": {
-            "name": "M05 - Playbook Postman per le sequenze checkout",
+            "name": "M07 - Playbook Postman per le sequenze checkout",
             "description": "Generata da openapi/checkout-api.yaml e scenarios/postman-playbooks.yaml con scripts/generate_postman.py. Scenario simulati: Prism sceglie gli esempi OAS tramite Prefer; non sono test di un backend stateful.",
             "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         },

@@ -1,8 +1,8 @@
 {
-  "name": "m05-api-sequence-playbooks",
+  "name": "m07-api-sequence-playbooks",
   "private": true,
   "version": "1.0.0",
-  "description": "Local OpenAPI mock and Postman/Newman playbooks for course M05",
+  "description": "Local OpenAPI mock and Postman/Newman playbooks for course M07",
   "scripts": {
     "generate": "python3 scripts/generate_postman.py",
     "test:playbooks": "bash scripts/run_playbooks.sh"

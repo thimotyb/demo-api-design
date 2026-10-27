@@ -28,9 +28,9 @@ Folder names and READMEs inside the copied trees stay in Italian, as in their so
 | 03 Authentication and Authorization | [`moduli/m03/https-traefik/`](moduli/m03/https-traefik/README.md) | The Orders API and Keycloak behind Traefik with TLS: local CA and certificate, HTTP to HTTPS redirect, smoke test; plus an untested Let's Encrypt variant. Autonomous, the HTTP laboratory is unchanged |
 | 04 Error Handling and Robustness | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md), [`moduli/m04/demo-tracing/`](moduli/m04/demo-tracing/README.md) | Bounded retry for transient gateway failures, with tests; OpenTelemetry trace from GraphQL to REST shown in Jaeger (tested in memory, Jaeger needs Docker); sections 1.1 and 1.2 point to the shared error shape and exception handlers of [`moduli/m01/`](moduli/m01/README.md) |
 | 05 Performance and Optimization | [`moduli/m05/demo-performance/`](moduli/m05/demo-performance/README.md) | HTTP caching with `ETag` and `304`, `202 Accepted` with a polled status resource, and a Locust load test; 11 tests. Async versus blocking code is in the M02 demo |
-| 06 Documentation and Developer Experience | [`moduli/m05/`](moduli/m05/README.md) | OpenAPI profile with named examples, Spectral rulesets |
+| 06 Documentation and Developer Experience | [`moduli/m06/spectral/`](moduli/m06/spectral/README.md) | Spectral rulesets (OWASP Top 10, URL style, documentation) run on the contract of `moduli/m07/openapi/` |
 | 06 Documentation and Developer Experience | [`moduli/m06/zudoku-portal/`](moduli/m06/zudoku-portal/README.md) | Zudoku developer portal: MDX guides plus the API reference built from the M05 contract (Node.js 22.22+) |
-| 07 API Testing | [`moduli/m05/`](moduli/m05/README.md) | Prism mock, generated Postman collection, Newman playbooks |
+| 07 API Testing | [`moduli/m07/`](moduli/m07/README.md) | OpenAPI profile with named examples, Prism mock, generated Postman collection, Newman playbooks |
 | 07 API Testing | [`moduli/m04/demo-retry/`](moduli/m04/demo-retry/README.md) | `unittest` suite that fails on the starter and passes on the reference solution |
 | Case design material | [`moduli/m06/architecture/`](moduli/m06/architecture/README.md) | Architecture and ArchiMate views with a traceability matrix |
 
