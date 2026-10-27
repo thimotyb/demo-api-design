@@ -8,13 +8,14 @@ Piccola API FastAPI autonoma (dati e job in memoria) che accompagna il modulo M0
 | [`test_caching.py`](test_caching.py) | L'ETag cambia solo se cambia la risorsa; `304` senza corpo; `If-None-Match` in forma debole, in elenco e `*` |
 | [`test_jobs.py`](test_jobs.py) | `202` subito, polling fino a `done`, l'API resta reattiva mentre il report è in corso |
 | [`loadtest/locustfile.py`](loadtest/locustfile.py) | Due tipi di utente su `GET /products/1`: uno scarica sempre, l'altro rivalida con l'ETag |
-| [`loadtest/run_load.sh`](loadtest/run_load.sh) | Avvia l'API, esegue Locust senza interfaccia e stampa tempi e dimensione del corpo |
+| [`loadtest/run_load.sh`](loadtest/run_load.sh) | Avvia l'API, esegue Locust senza interfaccia e stampa tempi e dimensione del corpo; con `WEB=1` apre la console web |
 
 ## Esecuzione
 
 ```bash
 ./run_all.sh                    # ambiente virtuale, dipendenze e test (11)
 ./loadtest/run_load.sh          # load test: PORT, USERS e DURATION cambiano porta (8020), utenti (20) e durata (10s)
+WEB=1 ./loadtest/run_load.sh    # console web di Locust su http://localhost:8089 (WEB_PORT la cambia): utenti e velocità di avvio si scelgono lì, i risultati si vedono dal vivo; Ctrl+C per fermare
 ```
 
 ## Cosa aspettarsi dal load test

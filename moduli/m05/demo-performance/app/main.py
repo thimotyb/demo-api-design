@@ -48,7 +48,16 @@ def matches(if_none_match: str | None, etag: str) -> bool:
     """True if the client already holds this representation (If-None-Match, weak or strong)."""
     if not if_none_match:
         return False
+    # The header holds one or more ETags separated by commas, e.g.  "e1", W/"e2".
+    # strip() removes the spaces and removeprefix("W/") the marker of a weak validator, so
+    # candidates is a plain list such as ['"e1"', '"e2"']. The quotes are part of the value.
+    # (Splitting on "," is enough for our hex ETags; an ETag may contain a comma inside the
+    # quotes, and a complete parser would respect them.)
     candidates = [c.strip().removeprefix("W/") for c in if_none_match.split(",")]
+    # "x in list" is a membership test, like list.contains(x) in Java. Two cases give a match:
+    #  - etag in candidates: the current ETag of the product is one the client says it holds.
+    #  - "*" in candidates: the client sent  If-None-Match: *, which means "any version". On a
+    #    GET it matches whenever the resource exists, so the answer is 304.
     return "*" in candidates or etag in candidates
 
 
