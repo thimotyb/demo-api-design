@@ -6,16 +6,36 @@ header. /v1 and /v2 show a breaking change that needs a new version.
 
 from __future__ import annotations
 
+import logging
+import time
+import uuid
+from contextvars import ContextVar
 from datetime import datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, FastAPI, Header, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from shared import domain
 from shared.domain import DomainError, Money, Store
+
+# The identifier of the request being served, readable from any code it calls.
+request_id: ContextVar[str] = ContextVar("request_id", default="-")
+log = logging.getLogger("api")
+
+
+class RequestIdFilter(logging.Filter):
+    """Adds the current request id to every record, so a format can print %(request_id)s."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "request_id"):  # a caller may pass it with extra=
+            record.request_id = request_id.get()
+        return True
+
+
+log.addFilter(RequestIdFilter())
 
 # Domain error code -> HTTP status. The payment statuses follow the case contract.
 STATUS = {
@@ -87,6 +107,9 @@ class CustomerOut(BaseModel):
 
 
 class PaymentRequest(BaseModel):
+    # A payment is sensitive: a misspelled or unexpected field is rejected (400), not ignored.
+    model_config = ConfigDict(extra="forbid")
+
     customer_id: str
     amount: MoneyModel
     payment_token: str
@@ -117,6 +140,25 @@ def create_app(store: Store | None = None) -> FastAPI:
     app = FastAPI(title="Checkout REST API")
     app.state.store = store
 
+    @app.middleware("http")
+    async def tracing(request: Request, call_next):
+        # Accept the caller's X-Request-ID or generate one, and return it in the response.
+        rid = request.headers.get("x-request-id", str(uuid.uuid4()))
+        token = request_id.set(rid)
+        request.state.request_id = rid  # still readable by the handlers, outside the middleware
+        started = time.perf_counter()
+        status = 500  # what the client gets if an exception escapes every handler
+        try:
+            response = await call_next(request)
+            status = response.status_code
+        finally:
+            # Method, path, status and duration only: never headers, bodies or tokens.
+            log.info("%s %s -> %s in %.1f ms", request.method, request.url.path, status,
+                     (time.perf_counter() - started) * 1000)
+            request_id.reset(token)
+        response.headers["X-Request-ID"] = rid
+        return response
+
     def get_store(request: Request) -> Store:
         return request.app.state.store
 
@@ -124,6 +166,15 @@ def create_app(store: Store | None = None) -> FastAPI:
     async def domain_error(request: Request, exc: DomainError):
         return JSONResponse({"code": exc.code, "message": exc.message, "details": exc.details},
                             status_code=STATUS.get(exc.code, 500))
+
+    @app.exception_handler(Exception)
+    async def unhandled_error(request: Request, exc: Exception):
+        # Last resort, for what no other handler claims. The traceback goes to the log
+        # only; the client gets the shared error shape and the id to quote to support.
+        rid = getattr(request.state, "request_id", "-")
+        log.error("Unhandled error", exc_info=exc, extra={"request_id": rid})
+        return JSONResponse({"code": "INTERNAL_ERROR", "message": "Unexpected error.", "details": {}},
+                            status_code=500, headers={"X-Request-ID": rid})
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):

@@ -130,3 +130,38 @@ def test_third_transient_failure_becomes_retries_exhausted(client, store):
     assert answers[0].json()["details"] == {"attempt": 1, "max_attempts": 3}
     assert answers[2].json()["details"] == {"attempts": 3}
     assert store.gateway.calls == 3
+
+
+# Unknown fields on a payment are rejected with the shared error shape instead of being silently ignored.
+def test_unknown_field_in_a_payment_is_rejected(client, store):
+    response = client.post("/v1/payments", json={**PAYMENT, "ammount": 1})
+    assert response.status_code == 400 and response.json()["code"] == "INVALID_REQUEST"
+    assert store.gateway.calls == 0
+
+
+# Every response carries an X-Request-ID (the caller's, or a generated one) and the request is logged with it.
+def test_request_id_is_returned_and_logged(client, caplog):
+    with caplog.at_level("INFO", logger="api"):
+        kept = client.get("/v1/orders/o-1001", headers={"X-Request-ID": "req-42"})
+        made = client.get("/v1/orders/o-1001")
+    assert kept.headers["X-Request-ID"] == "req-42"
+    assert len(made.headers["X-Request-ID"]) == 36
+    record = next(r for r in caplog.records if r.request_id == "req-42")
+    assert "GET /v1/orders/o-1001 -> 200" in record.getMessage()
+
+
+# An unexpected exception becomes a generic 500 in the shared shape: no traceback in the body, the traceback and the request id in the log.
+def test_unexpected_error_is_a_generic_500_and_is_logged(store, caplog):
+    def broken(order_id):
+        raise RuntimeError("secret internal detail")
+
+    store.get_order = broken
+    client = TestClient(create_app(store), raise_server_exceptions=False)
+    with caplog.at_level("ERROR", logger="api"):
+        response = client.get("/v1/orders/o-1001", headers={"X-Request-ID": "req-500"})
+    assert response.status_code == 500
+    assert response.json() == {"code": "INTERNAL_ERROR", "message": "Unexpected error.", "details": {}}
+    assert response.headers["X-Request-ID"] == "req-500"
+    assert "secret internal detail" not in response.text
+    record = next(r for r in caplog.records if r.getMessage() == "Unhandled error")
+    assert record.request_id == "req-500" and "secret internal detail" in str(record.exc_info[1])
